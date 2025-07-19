@@ -44,7 +44,7 @@ if can_edit:
             df = pd.concat([df, new_row], ignore_index=True)
             save_schedule(df)
             st.success("✅ 일정이 저장되었습니다.")
-            st.experimental_rerun()
+            st.rerun()
 
 # 🗓️ 캘린더에 표시
 st.subheader("📌 달력 보기")
