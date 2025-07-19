@@ -1,156 +1,100 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import os
 from streamlit_folium import st_folium
 import folium
 from geopy.geocoders import Nominatim
-from streamlit_calendar import calendar
-from datetime import time as dtime
 
-# 설정
-st.set_page_config(page_title="📅 일정 캘린더 + 지도", layout="wide")
-DATA_PATH = "schedule.csv"
-geolocator = Nominatim(user_agent="calendar_app")
+# 기본 지도 위치: 대한민국 중심
+DEFAULT_LAT = 36.5
+DEFAULT_LON = 127.5
 
-# 데이터 불러오기 & 저장
-def load_schedule():
-    if os.path.exists(DATA_PATH):
-        return pd.read_csv(DATA_PATH)
-    else:
-        return pd.DataFrame(columns=["Date", "Time", "Title", "Memo", "Location"])
-
-def save_schedule(df):
-    df.to_csv(DATA_PATH, index=False)
-
-df = load_schedule()
-
-# --- 관리자 로그인 ---
-with st.expander("🔐 관리자 로그인"):
-    password = st.text_input("비밀번호", type="password")
-    if "admin" not in st.session_state:
-        st.session_state.admin = False
-    if password == "bol4pass":
-        st.session_state.admin = True
-        st.success("🔓 관리자 모드 활성화됨")
-    elif password != "":
-        st.error("❌ 비밀번호가 틀렸습니다")
-
-can_edit = st.session_state.get("admin", False)
-edit_index = st.session_state.get("edit_index", None)
-
-# --- 제목 ---
+st.set_page_config(layout="wide")
 st.title("📅 일정 캘린더 + 지도")
 
-# --- 일정 추가 / 수정 폼 ---
-if can_edit:
-    st.subheader("✏️ 일정 추가 / 수정")
+# CSV 파일 경로
+SCHEDULE_CSV = "schedules.csv"
 
-    if edit_index is not None and edit_index in df.index:
-        row = df.loc[edit_index]
-        default_date = pd.to_datetime(row["Date"]).date()
-        time_str = row["Time"]
-        try:
-            default_time = dtime.fromisoformat(time_str)
-        except:
-            default_time = datetime.datetime.now().time()
-        default_title = row["Title"]
-        default_memo = row["Memo"]
-        default_location = row["Location"]
-    else:
-        edit_index = None
-        st.session_state.edit_index = None
-        default_date = datetime.date.today()
-        default_time = datetime.datetime.now().time()
-        default_title = ""
-        default_memo = ""
-        default_location = ""
+# CSV 파일 로드
+if "df" not in st.session_state:
+    try:
+        st.session_state.df = pd.read_csv(SCHEDULE_CSV)
+        st.session_state.df["Date"] = pd.to_datetime(st.session_state.df["Date"])
+    except:
+        st.session_state.df = pd.DataFrame(columns=["Date", "Time", "Title", "Memo", "Location"])
 
-    with st.form("form_add"):
-        date = st.date_input("날짜", default_date)
-        time = st.time_input("시간", default_time, step=datetime.timedelta(minutes=30))
-        title = st.text_input("일정 제목", default_title)
-        memo = st.text_area("메모", default_memo)
-        location = st.text_input("장소 또는 주소", default_location)
-        submitted = st.form_submit_button("저장")
+# 관리자 사이드바
+with st.sidebar:
+    st.markdown("🔐 **관리자 모드**")
+    password = st.text_input("비밀번호", type="password")
+    is_admin = password == "1234"  # 원하는 비밀번호로 설정
 
-        if submitted:
-            new_data = pd.DataFrame([[date, time, title, memo, location]], columns=df.columns)
-            if edit_index is not None:
-                df.loc[edit_index] = new_data.iloc[0]
-                st.success("✅ 일정이 수정되었습니다.")
-                st.session_state.edit_index = None
-            else:
-                df = pd.concat([df, new_data], ignore_index=True)
-                st.success("✅ 일정이 추가되었습니다.")
-            save_schedule(df)
-            st.rerun()
+# 일정 추가/수정
+st.subheader("✏️ 일정 추가 / 수정")
+with st.form("event_form"):
+    today = datetime.date.today()
+    date = st.date_input("날짜", today)
+    time = st.time_input("시간", datetime.time(18, 0))
+    title = st.text_input("일정 제목")
+    memo = st.text_area("메모")
+    location = st.text_input("장소 또는 주소")
+    edit_idx = st.selectbox("수정할 일정 선택 (선택 안 하면 새로 추가)", options=["새 일정"] + list(st.session_state.df.index))
 
-# --- 일정 목록 ---
-if not df.empty:
-    st.subheader("📋 일정 목록")
-
-    for i in df.index:
-        row = df.loc[i]
-        with st.container():
-            st.markdown(f"**{row['Date']} {row['Time'][:-3]} - {row['Title']}**")
-            st.caption(f"{row['Memo']}")
-            st.caption(f"📍 {row['Location']}")
-
-            if can_edit:
-                col1, col2 = st.columns([1, 1])
-                if col1.button("✏️ 수정", key=f"edit_{i}"):
-                    st.session_state.edit_index = i
-                    st.rerun()
-                if col2.button("🗑️ 삭제", key=f"delete_{i}"):
-                    df = df.drop(i).reset_index(drop=True)
-                    save_schedule(df)
-                    st.success("🗑️ 삭제 완료")
-                    st.rerun()
-else:
-    st.info("등록된 일정이 없습니다.")
-
-# --- 캘린더 ---
-st.subheader("🗓️ 달력 보기")
-
-if not df.empty:
-    events = [
-        {
-            "title": f"{row['Time'][:-3]}~ {row['Title']}",
-            "start": f"{row['Date']}T{row['Time']}",
-            "end": f"{row['Date']}T{row['Time']}",
-            "color": "red",
+    submitted = st.form_submit_button("저장")
+    if submitted and is_admin:
+        new_row = {
+            "Date": date.strftime("%Y-%m-%d"),
+            "Time": time.strftime("%H:%M"),
+            "Title": title,
+            "Memo": memo,
+            "Location": location
         }
-        for _, row in df.iterrows()
-    ]
+        if edit_idx == "새 일정":
+            st.session_state.df.loc[len(st.session_state.df)] = new_row
+        else:
+            st.session_state.df.loc[edit_idx] = new_row
+        st.session_state.df.to_csv(SCHEDULE_CSV, index=False)
+        st.success("✅ 일정이 저장되었습니다.")
+        st.experimental_rerun()
 
-    calendar(options={
-        "initialView": "dayGridMonth",
-        "events": events,
-        "editable": False,
-        "locale": "ko"
-    })
-else:
-    st.info("캘린더에 표시할 일정이 없습니다.")
-
-# --- 지도 ---
+# 지도 표시
 st.subheader("🗺️ 지도 보기")
 
-if not df.empty:
-    m = folium.Map(location=[36.5, 127.8], zoom_start=7, max_bounds=True)
-    m.fit_bounds([[33.0, 124.5], [38.7, 131.2]])
-    for _, row in df.iterrows():
-        if row["Location"]:
-            try:
-                loc = geolocator.geocode(row["Location"])
-                if loc:
-                    folium.Marker(
-                        location=[loc.latitude, loc.longitude],
-                        popup=f"{row['Title']} ({row['Location']})",
-                        icon=folium.Icon(color="red", icon="map-marker")
-                    ).add_to(m)
-            except:
-                continue
-    st_folium(m, width=800, height=400)
-else:
-    st.info("지도에 표시할 일정이 없습니다.")
+# 지도 초기화
+m = folium.Map(location=[DEFAULT_LAT, DEFAULT_LON], zoom_start=7)
+
+# 지도에 마커 추가
+geolocator = Nominatim(user_agent="calendar_app")
+for _, row in st.session_state.df.iterrows():
+    loc = row["Location"]
+    try:
+        location_obj = geolocator.geocode(loc)
+        if location_obj:
+            folium.Marker(
+                location=[location_obj.latitude, location_obj.longitude],
+                popup=f"{row['Title']}<br>{row['Date']} {row['Time']}<br>{loc}",
+                icon=folium.Icon(color='red')
+            ).add_to(m)
+    except:
+        continue
+
+# 지도 출력
+st_folium(m, width=700)
+
+# 일정 리스트
+st.subheader("📋 일정 목록")
+for idx, row in st.session_state.df.iterrows():
+    st.markdown(f"**{row['Date']} {row['Time']} ~** {row['Title']}")
+    st.text(row["Memo"])
+    st.markdown(f"📍 {row['Location']}")
+    if is_admin:
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("✏️ 수정", key=f"edit_{idx}"):
+                st.experimental_set_query_params(edit=idx)
+        with col2:
+            if st.button("🗑️ 삭제", key=f"delete_{idx}"):
+                st.session_state.df.drop(index=idx, inplace=True)
+                st.session_state.df.to_csv(SCHEDULE_CSV, index=False)
+                st.success("✅ 삭제 완료")
+                st.experimental_rerun()
