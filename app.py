@@ -46,7 +46,7 @@ st.title("📅 일정 캘린더 + 지도")
 if can_edit:
     st.subheader("✏️ 일정 추가 / 수정")
 
-    if edit_index is not None:
+    if edit_index is not None and edit_index in df.index:
         row = df.loc[edit_index]
         default_date = pd.to_datetime(row["Date"]).date()
         time_str = row["Time"]
@@ -58,6 +58,8 @@ if can_edit:
         default_memo = row["Memo"]
         default_location = row["Location"]
     else:
+        edit_index = None
+        st.session_state.edit_index = None
         default_date = datetime.date.today()
         default_time = datetime.datetime.now().time()
         default_title = ""
