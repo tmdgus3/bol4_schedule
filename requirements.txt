@@ -1,5 +1,6 @@
 streamlit
 pandas
+folium
 geopy
 streamlit-folium
-folium
+streamlit-calendar
