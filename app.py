@@ -33,7 +33,7 @@ if can_edit:
     st.subheader("✏️ 새 일정 추가")
     with st.form("form_add"):
         date = st.date_input("날짜", datetime.date.today())
-        time = st.time_input("시간", datetime.datetime.now().time())
+        time = st.time_input("시간", datetime.datetime.now().time(), step=datetime.timedelta(minutes=30))
         title = st.text_input("일정 제목")
         memo = st.text_area("메모")
         location = st.text_input("장소 또는 주소", "")
