@@ -6,11 +6,14 @@ from streamlit_folium import st_folium
 import folium
 from geopy.geocoders import Nominatim
 from streamlit_calendar import calendar
+from datetime import time as dtime
 
+# 설정
 st.set_page_config(page_title="📅 일정 캘린더 + 지도", layout="wide")
 DATA_PATH = "schedule.csv"
 geolocator = Nominatim(user_agent="calendar_app")
 
+# 데이터 불러오기 & 저장
 def load_schedule():
     if os.path.exists(DATA_PATH):
         return pd.read_csv(DATA_PATH)
@@ -36,9 +39,10 @@ with st.expander("🔐 관리자 로그인"):
 can_edit = st.session_state.get("admin", False)
 edit_index = st.session_state.get("edit_index", None)
 
-# --- 일정 추가 / 수정 ---
+# --- 제목 ---
 st.title("📅 일정 캘린더 + 지도")
 
+# --- 일정 추가 / 수정 폼 ---
 if can_edit:
     st.subheader("✏️ 일정 추가 / 수정")
 
@@ -46,11 +50,10 @@ if can_edit:
         row = df.loc[edit_index]
         default_date = pd.to_datetime(row["Date"]).date()
         time_str = row["Time"]
-        from datetime import time as dtime
         try:
             default_time = dtime.fromisoformat(time_str)
-        except ValueError:
-            default_time = datetime.datetime.now().time())
+        except:
+            default_time = datetime.datetime.now().time()
         default_title = row["Title"]
         default_memo = row["Memo"]
         default_location = row["Location"]
@@ -88,7 +91,7 @@ if not df.empty:
     for i in df.index:
         row = df.loc[i]
         with st.container():
-            st.markdown(f"**{row['Date']} {row['Time']} - {row['Title']}**")
+            st.markdown(f"**{row['Date']} {row['Time'][:-3]} - {row['Title']}**")
             st.caption(f"{row['Memo']}")
             st.caption(f"📍 {row['Location']}")
 
@@ -107,16 +110,18 @@ else:
 
 # --- 캘린더 ---
 st.subheader("🗓️ 달력 보기")
+
 if not df.empty:
     events = [
         {
-            "title": row["Title"],
+            "title": f"{row['Time'][:-3]}~ {row['Title']}",
             "start": f"{row['Date']}T{row['Time']}",
             "end": f"{row['Date']}T{row['Time']}",
             "color": "red",
         }
         for _, row in df.iterrows()
     ]
+
     calendar(options={
         "initialView": "dayGridMonth",
         "events": events,
@@ -128,6 +133,7 @@ else:
 
 # --- 지도 ---
 st.subheader("🗺️ 지도 보기")
+
 if not df.empty:
     m = folium.Map(location=[36.5, 127.8], zoom_start=7, max_bounds=True)
     m.fit_bounds([[33.0, 124.5], [38.7, 131.2]])
