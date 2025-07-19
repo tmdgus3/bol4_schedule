@@ -7,7 +7,6 @@ import folium
 from geopy.geocoders import Nominatim
 from streamlit_calendar import calendar
 
-# 설정
 st.set_page_config(page_title="📅 일정 캘린더 + 지도", layout="wide")
 DATA_PATH = "schedule.csv"
 geolocator = Nominatim(user_agent="calendar_app")
@@ -23,12 +22,21 @@ def save_schedule(df):
 
 df = load_schedule()
 
-# 로그인 상태
-password = st.sidebar.text_input("비밀번호 입력", type="password")
-can_edit = password == "bol4pass"
+# --- 관리자 로그인 ---
+with st.expander("🔐 관리자 로그인"):
+    password = st.text_input("비밀번호", type="password")
+    if "admin" not in st.session_state:
+        st.session_state.admin = False
+    if password == "bol4pass":
+        st.session_state.admin = True
+        st.success("🔓 관리자 모드 활성화됨")
+    elif password != "":
+        st.error("❌ 비밀번호가 틀렸습니다")
+
+can_edit = st.session_state.get("admin", False)
 edit_index = st.session_state.get("edit_index", None)
 
-# 일정 추가/수정 폼
+# --- 일정 추가 / 수정 ---
 st.title("📅 일정 캘린더 + 지도")
 
 if can_edit:
@@ -37,7 +45,11 @@ if can_edit:
     if edit_index is not None:
         row = df.loc[edit_index]
         default_date = pd.to_datetime(row["Date"]).date()
-        default_time = datetime.datetime.strptime(row["Time"], "%H:%M:%S").time()
+        time_str = row["Time"]
+        try:
+            default_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
+        except ValueError:
+            default_time = datetime.datetime.strptime(time_str, "%H:%M").time()
         default_title = row["Title"]
         default_memo = row["Memo"]
         default_location = row["Location"]
@@ -68,7 +80,7 @@ if can_edit:
             save_schedule(df)
             st.rerun()
 
-# 📌 일정 목록 + 수정/삭제
+# --- 일정 목록 ---
 if not df.empty:
     st.subheader("📋 일정 목록")
 
@@ -92,7 +104,7 @@ if not df.empty:
 else:
     st.info("등록된 일정이 없습니다.")
 
-# 📅 캘린더
+# --- 캘린더 ---
 st.subheader("🗓️ 달력 보기")
 if not df.empty:
     events = [
@@ -113,7 +125,7 @@ if not df.empty:
 else:
     st.info("캘린더에 표시할 일정이 없습니다.")
 
-# 🗺️ 지도
+# --- 지도 ---
 st.subheader("🗺️ 지도 보기")
 if not df.empty:
     m = folium.Map(location=[36.5, 127.8], zoom_start=7, max_bounds=True)
