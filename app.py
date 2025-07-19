@@ -46,10 +46,11 @@ if can_edit:
         row = df.loc[edit_index]
         default_date = pd.to_datetime(row["Date"]).date()
         time_str = row["Time"]
+        from datetime import time as dtime
         try:
-            default_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
+            default_time = dtime.fromisoformat(time_str)
         except ValueError:
-            default_time = datetime.datetime.strptime(time_str, "%H:%M").time()
+            default_time = datetime.datetime.now().time())
         default_title = row["Title"]
         default_memo = row["Memo"]
         default_location = row["Location"]
