@@ -42,7 +42,7 @@ if can_edit:
         time = st.time_input("시간", datetime.datetime.now().time(), step=datetime.timedelta(minutes=30))
         title = st.text_input("일정 제목")
         memo = st.text_area("메모")
-        location = st.text_input("장소 또는 주소", placeholder="서울시 강남구 ...")
+        location = st.text_input("장소 또는 주소", placeholder="예: 서울시 강남구 테헤란로 123")
         submitted = st.form_submit_button("저장")
 
         if submitted:
@@ -52,7 +52,7 @@ if can_edit:
             st.success("✅ 저장 완료!")
             st.rerun()
 
-# 🗓️ 달력 표시
+# 🗓️ 캘린더 표시
 st.subheader("📌 달력 보기")
 
 if not df.empty:
@@ -66,19 +66,14 @@ if not df.empty:
         for _, row in df.iterrows()
     ]
 
-    value = calendar(
-        events=events,
-        options={
-            "initialView": "dayGridMonth",
-            "locale": "ko",
-            "headerToolbar": {
-                "left": "prev,next today",
-                "center": "title",
-                "right": "dayGridMonth,timeGridWeek"
-            }
-        },
-        key="calendar",
-    )
+    calendar_options = {
+        "initialView": "dayGridMonth",
+        "events": events,
+        "editable": False,
+        "locale": "ko"
+    }
+
+    calendar(options=calendar_options)
 else:
     st.info("등록된 일정이 없습니다.")
 
@@ -86,7 +81,8 @@ else:
 st.subheader("🗺️ 지도 보기")
 
 if not df.empty and "Location" in df.columns:
-    m = folium.Map(location=[37.5665, 126.9780], zoom_start=5)  # 서울 기본값
+    m = folium.Map(location=[36.5, 127.8], zoom_start=7)  # 대한민국 중심
+
     for _, row in df.iterrows():
         if row["Location"]:
             try:
@@ -94,10 +90,10 @@ if not df.empty and "Location" in df.columns:
                 if loc:
                     folium.Marker(
                         location=[loc.latitude, loc.longitude],
-                        popup=row["Title"],
-                        icon=folium.Icon(color="red")
+                        popup=f"{row['Title']} ({row['Location']})",
+                        icon=folium.Icon(color="red", icon="map-marker")
                     ).add_to(m)
-            except:
+            except Exception as e:
                 continue
 
     st_folium(m, width=800, height=400)
