@@ -7,7 +7,7 @@ import folium
 from geopy.geocoders import Nominatim
 from streamlit_calendar import calendar
 
-# 기본 설정
+# 설정
 st.set_page_config(page_title="📅 일정 캘린더 + 지도", layout="wide")
 DATA_PATH = "schedule.csv"
 geolocator = Nominatim(user_agent="calendar_app")
@@ -32,7 +32,7 @@ st.caption("🔒 수정은 비밀번호를 입력한 사람만 가능해요.")
 
 # 비밀번호 입력
 password = st.sidebar.text_input("비밀번호 입력", type="password")
-can_edit = password == "bol4pass"  # 원하는 비밀번호로 바꿔도 돼요
+can_edit = password == "bol4pass"  # 원하는 비밀번호로 바꿔도 됨
 
 # 일정 추가 폼
 if can_edit:
@@ -52,7 +52,7 @@ if can_edit:
             st.success("✅ 저장 완료!")
             st.rerun()
 
-# 🗓️ 캘린더 표시
+# 📌 캘린더 보기
 st.subheader("📌 달력 보기")
 
 if not df.empty:
@@ -77,11 +77,16 @@ if not df.empty:
 else:
     st.info("등록된 일정이 없습니다.")
 
-# 🗺️ 지도 표시
+# 🗺️ 지도 보기
 st.subheader("🗺️ 지도 보기")
 
 if not df.empty and "Location" in df.columns:
-    m = folium.Map(location=[36.5, 127.8], zoom_start=7)  # 대한민국 중심
+    m = folium.Map(
+        location=[36.5, 127.8],  # 대한민국 중심
+        zoom_start=7,
+        max_bounds=True
+    )
+    m.fit_bounds([[33.0, 124.5], [38.7, 131.2]])  # 남한 범위 고정
 
     for _, row in df.iterrows():
         if row["Location"]:
@@ -99,3 +104,26 @@ if not df.empty and "Location" in df.columns:
     st_folium(m, width=800, height=400)
 else:
     st.info("표시할 위치 정보가 없습니다.")
+
+# 🗑️ 일정 삭제
+if can_edit:
+    st.subheader("🗑️ 일정 삭제")
+
+    if not df.empty:
+        selected_rows = []
+        for i in df.index:
+            col1, col2 = st.columns([1, 9])
+            with col1:
+                selected = st.checkbox("", key=f"del_{i}")
+            with col2:
+                st.write(f"{df.loc[i, 'Date']} {df.loc[i, 'Time']} - {df.loc[i, 'Title']}")
+            if selected:
+                selected_rows.append(i)
+
+        if selected_rows and st.button("선택한 일정 삭제"):
+            df = df.drop(index=selected_rows).reset_index(drop=True)
+            save_schedule(df)
+            st.success("✅ 삭제 완료!")
+            st.rerun()
+    else:
+        st.info("삭제할 일정이 없습니다.")
