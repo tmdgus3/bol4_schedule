@@ -67,7 +67,7 @@ if not df.empty:
         "locale": "ko",
     }
 
-    calendar(calendar_options, height=500)
+    calendar(options=calendar_options, height=500)
 
 else:
     st.info("현재 등록된 일정이 없습니다.")
