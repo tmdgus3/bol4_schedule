@@ -7,6 +7,7 @@ import datetime
 import pytz
 import calendar
 import matplotlib.pyplot as plt
+import os
 
 # 📁 CSV 파일 경로
 DATA_PATH = "schedule.csv"
