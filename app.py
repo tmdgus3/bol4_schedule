@@ -1,62 +1,73 @@
 import streamlit as st
 import pandas as pd
+import folium
+from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
-from datetime import datetime
-import time
+import pyperclip
+import datetime
+import os
 
-# CSV 파일 경로
-CSV_PATH = "schedule.csv"
-
-# 페이지 기본 설정
-st.set_page_config(page_title="볼빨간사춘기 스케줄 관리", layout="centered")
-
+# 페이지 설정
+st.set_page_config(page_title="볼빨간사춘기 스케줄 관리", layout="wide")
 st.title("📅 볼빨간사춘기 스케줄 관리")
 
-# 마지막 수정 시간
-def get_modified_time(path):
-    t = time.localtime(os.path.getmtime(path))
-    return time.strftime("%Y-%m-%d %H:%M", t)
+# 경로 및 로딩
+DATA_PATH = "schedule.csv"
+geolocator = Nominatim(user_agent="bol4_schedule_app")
 
-st.markdown(f"<p style='font-size:12px; color:gray; text-align:right'>최종 수정: {get_modified_time(CSV_PATH)}</p>", unsafe_allow_html=True)
+# 데이터 로드
+def load_data():
+    if os.path.exists(DATA_PATH):
+        return pd.read_csv(DATA_PATH)
+    else:
+        return pd.DataFrame(columns=["날짜", "시간", "내용", "메모", "위치", "도로명주소"])
 
-# 데이터 로딩
-@st.cache_data
-def load_schedule():
-    return pd.read_csv(CSV_PATH)
+df = load_data()
 
-df = load_schedule()
+# 최종 수정일시 표시
+if os.path.exists(DATA_PATH):
+    modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(DATA_PATH))
+    st.caption(f"📌 최종 수정일: {modified_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-# 온라인/오프라인 구분
-online_df = df[df["온라인/오프라인"] == "온라인"]
-offline_df = df[df["온라인/오프라인"] == "오프라인"]
+# 일정 구분
+online_df = df[df["위치"].str.contains("온라인", case=False, na=False)]
+offline_df = df[~df["위치"].str.contains("온라인", case=False, na=False)]
 
 # 온라인 일정
-st.header("🖥 온라인 일정")
-if online_df.empty:
-    st.info("온라인 일정이 없습니다.")
+st.subheader("💻 온라인 일정")
+if not online_df.empty:
+    st.dataframe(online_df[["날짜", "시간", "내용", "메모", "위치"]], use_container_width=True)
 else:
-    st.dataframe(online_df.drop(columns=["위치", "온라인/오프라인"]))
+    st.info("온라인 일정이 없습니다.")
 
 # 오프라인 일정
-st.header("📍 오프라인 일정 (지도 포함)")
-if offline_df.empty:
-    st.info("오프라인 일정이 없습니다.")
-else:
-    st.dataframe(offline_df.drop(columns=["온라인/오프라인"]))
-    
-    geolocator = Nominatim(user_agent="bol4_app")
-    map_data = []
+st.subheader("📍 오프라인 일정")
+if not offline_df.empty:
+    for i, row in offline_df.iterrows():
+        st.markdown(f"**{row['날짜']} {row['시간']} - {row['내용']}**")
+        if pd.notna(row["메모"]) and row["메모"].strip() != "":
+            st.caption(f"📝 {row['메모']}")
+        if pd.notna(row["위치"]):
+            if st.button(f"📋 {row['위치']}", key=f"copy_{i}"):
+                pyperclip.copy(row["도로명주소"])
+                st.success("📌 도로명주소가 복사되었습니다!")
 
-    for _, row in offline_df.iterrows():
-        if pd.notna(row["위치"]) and row["위치"].strip():
-            try:
-                loc = geolocator.geocode(row["위치"])
-                if loc:
-                    map_data.append({"lat": loc.latitude, "lon": loc.longitude})
-            except:
-                continue
-    
-    if map_data:
-        st.map(pd.DataFrame(map_data))
-    else:
-        st.warning("유효한 주소가 없어 지도를 표시할 수 없습니다.")
+# 지도
+st.subheader("🗺️ 오프라인 위치 보기")
+m = folium.Map(location=[36.5, 127.8], zoom_start=7)
+m.fit_bounds([[33.0, 124.5], [38.7, 131.2]])
+
+for _, row in offline_df.iterrows():
+    if pd.notna(row["도로명주소"]):
+        try:
+            location = geolocator.geocode(row["도로명주소"])
+            if location:
+                folium.Marker(
+                    location=[location.latitude, location.longitude],
+                    popup=row["내용"],
+                    icon=folium.Icon(color="red", icon="info-sign")
+                ).add_to(m)
+        except:
+            continue
+
+st_folium(m, width=800, height=450)
