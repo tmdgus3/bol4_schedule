@@ -35,7 +35,13 @@ offline_df = df[~df["위치"].str.contains("온라인", case=False, na=False)]
 # 온라인 일정
 st.subheader("💻 온라인 일정")
 if not online_df.empty:
-    st.dataframe(online_df[["날짜", "시간", "내용", "메모", "위치"]], use_container_width=True)
+    for i, row in online_df.iterrows():
+        st.markdown(f"**{row['날짜']} {row['시간']} - {row['내용']}**")
+        if pd.notna(row["메모"]) and row["메모"].strip() != "":
+            st.caption(f"📝 {row['메모']}")
+        if pd.notna(row["위치"]):
+            if st.button(f"📺 {row['위치']}", key=f"show_platform_{i}"):
+                st.markdown(f"➡️ 시청 플랫폼: **{row['위치']}**")
 else:
     st.info("온라인 일정이 없습니다.")
 
