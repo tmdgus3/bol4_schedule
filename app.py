@@ -66,7 +66,7 @@ if not offline_df.empty:
         if pd.notna(row["위치"]):
             cols = st.columns([4, 1.5])
             with cols[0]:
-                st.markdown(f"📍 <span style='color:{color}'>⬤</span> {row['위치']}", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:{color}'>⬤</span> {row['위치']}", unsafe_allow_html=True)
             with cols[1]:
                 if st.button("세부주소 보기", key=f"show_address_btn_{i}"):
                     if pd.notna(row["도로명주소"]):
