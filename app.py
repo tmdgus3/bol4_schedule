@@ -1,78 +1,62 @@
 import streamlit as st
 import pandas as pd
-import os
-from datetime import datetime
-import folium
-from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
+from datetime import datetime
+import time
 
-# 파일 경로
-CSV_FILE = "schedule.csv"
+# CSV 파일 경로
+CSV_PATH = "schedule.csv"
 
-# --- 타이틀 및 최종 수정일 표시 ---
-st.title("볼빨간사춘기 스케줄 관리")
-if os.path.exists(CSV_FILE):
-    last_modified = datetime.fromtimestamp(os.path.getmtime(CSV_FILE)).strftime("%Y-%m-%d %H:%M")
-    st.markdown(f"<p style='font-size: 12px; color: gray;'>📅 최종 수정일: {last_modified}</p>", unsafe_allow_html=True)
+# 페이지 기본 설정
+st.set_page_config(page_title="볼빨간사춘기 스케줄 관리", layout="centered")
 
-# --- CSV 로딩 ---
-if os.path.exists(CSV_FILE):
-    df = pd.read_csv(CSV_FILE)
+st.title("📅 볼빨간사춘기 스케줄 관리")
+
+# 마지막 수정 시간
+def get_modified_time(path):
+    t = time.localtime(os.path.getmtime(path))
+    return time.strftime("%Y-%m-%d %H:%M", t)
+
+st.markdown(f"<p style='font-size:12px; color:gray; text-align:right'>최종 수정: {get_modified_time(CSV_PATH)}</p>", unsafe_allow_html=True)
+
+# 데이터 로딩
+@st.cache_data
+def load_schedule():
+    return pd.read_csv(CSV_PATH)
+
+df = load_schedule()
+
+# 온라인/오프라인 구분
+online_df = df[df["온라인/오프라인"] == "온라인"]
+offline_df = df[df["온라인/오프라인"] == "오프라인"]
+
+# 온라인 일정
+st.header("🖥 온라인 일정")
+if online_df.empty:
+    st.info("온라인 일정이 없습니다.")
 else:
-    df = pd.DataFrame(columns=["날짜", "시간", "주소", "내용"])
+    st.dataframe(online_df.drop(columns=["위치", "온라인/오프라인"]))
 
-# --- 일정 추가 ---
-st.subheader("📝 일정 추가")
-with st.form("add_form"):
-    date = st.date_input("날짜")
-    time = st.time_input("시간")
-    address = st.text_input("주소")
-    content = st.text_input("내용")
-    submitted = st.form_submit_button("일정 추가")
-    if submitted and address and content:
-        new_row = pd.DataFrame([[str(date), str(time), address, content]], columns=df.columns)
-        df = pd.concat([df, new_row], ignore_index=True)
-        df.to_csv(CSV_FILE, index=False)
-        st.success("일정이 추가되었습니다!")
-
-# --- 일정 테이블 보기 ---
-st.subheader("📋 전체 일정")
-if df.empty:
-    st.info("현재 저장된 일정이 없습니다.")
+# 오프라인 일정
+st.header("📍 오프라인 일정 (지도 포함)")
+if offline_df.empty:
+    st.info("오프라인 일정이 없습니다.")
 else:
-    st.dataframe(df)
+    st.dataframe(offline_df.drop(columns=["온라인/오프라인"]))
+    
+    geolocator = Nominatim(user_agent="bol4_app")
+    map_data = []
 
-# --- 지도 표시 ---
-st.subheader("📍 일정 위치 보기")
-geolocator = Nominatim(user_agent="bol4-schedule")
-map_center = [36.5, 127.5]  # 대한민국 중심
-
-m = folium.Map(location=map_center, zoom_start=7)
-
-for _, row in df.iterrows():
-    try:
-        location = geolocator.geocode(row["주소"])
-        if location:
-            folium.Marker(
-                [location.latitude, location.longitude],
-                popup=f"{row['날짜']} {row['시간']} - {row['내용']}"
-            ).add_to(m)
-    except:
-        continue
-
-st_folium(m, height=500)
-
-# --- 관리자 모드 ---
-st.subheader("🔒 관리자 모드 (일정 삭제)")
-if "edit_index" not in st.session_state:
-    st.session_state.edit_index = None
-
-edit_options = [f"{i}: {row['날짜']} {row['시간']} {row['내용']}" for i, row in df.iterrows()]
-selected = st.selectbox("삭제할 일정을 선택하세요", [""] + edit_options)
-
-if selected:
-    idx = int(selected.split(":")[0])
-    if st.button("선택한 일정 삭제"):
-        df = df.drop(idx).reset_index(drop=True)
-        df.to_csv(CSV_FILE, index=False)
-        st.success("일정이 삭제되었습니다.")
+    for _, row in offline_df.iterrows():
+        if pd.notna(row["위치"]) and row["위치"].strip():
+            try:
+                loc = geolocator.geocode(row["위치"])
+                if loc:
+                    map_data.append({"lat": loc.latitude, "lon": loc.longitude})
+            except:
+                continue
+    
+    if map_data:
+        st.map(pd.DataFrame(map_data))
+    else:
+        st.warning("유효한 주소가 없어 지도를 표시할 수 없습니다.")
