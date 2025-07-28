@@ -3,7 +3,6 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
-import pyperclip
 import datetime
 import os
 
@@ -47,12 +46,29 @@ if not offline_df.empty:
         st.markdown(f"**{row['날짜']} {row['시간']} - {row['내용']}**")
         if pd.notna(row["메모"]) and row["메모"].strip() != "":
             st.caption(f"📝 {row['메모']}")
-        if pd.notna(row["위치"]):
-            if st.button(f"📋 {row['위치']}", key=f"copy_{i}"):
-                pyperclip.copy(row["도로명주소"])
-                st.success("📌 도로명주소가 복사되었습니다!")
+        if pd.notna(row["위치"]) and pd.notna(row["도로명주소"]):
+            location_name = row["위치"]
+            road_address = row["도로명주소"]
+            button_id = f"copy_button_{i}"
+            st.markdown(f"""
+                <button id="{button_id}">📋 {location_name}</button>
+                <script>
+                const btn = document.getElementById('{button_id}');
+                btn.onclick = function() {{
+                    navigator.clipboard.writeText("{road_address}")
+                        .then(() => {{
+                            alert("📌 도로명주소가 복사되었습니다!");
+                        }})
+                        .catch(err => {{
+                            alert("❌ 복사 실패: " + err);
+                        }});
+                }}
+                </script>
+            """, unsafe_allow_html=True)
+else:
+    st.info("오프라인 일정이 없습니다.")
 
-# 지도
+# 지도 표시
 st.subheader("🗺️ 오프라인 위치 보기")
 m = folium.Map(location=[36.5, 127.8], zoom_start=7)
 m.fit_bounds([[33.0, 124.5], [38.7, 131.2]])
