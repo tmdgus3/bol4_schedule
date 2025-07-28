@@ -51,28 +51,28 @@ if not online_df.empty:
 else:
     st.info("온라인 일정이 없습니다.")
 
-# -------------------------------
 # 📍 오프라인 일정
-# -------------------------------
 st.subheader("📍 오프라인 일정")
 if not offline_df.empty:
     for i, row in offline_df.iterrows():
         color = pin_colors[i % len(pin_colors)]
+        
+        # 날짜 + 시간 + 내용
         st.markdown(f"**{row['날짜']} {row['시간']} - {row['내용']}**")
-
+        
+        # 위치 (색상 핀 + 장소명)
+        st.markdown(f"📍 <span style='color:{color}'>⬤</span> {row['위치']}", unsafe_allow_html=True)
+        
+        # 도로명주소 (회색, 작게)
+        if pd.notna(row["도로명주소"]):
+            st.markdown(f"<span style='color:gray; font-size:0.9em;'>📌 {row['도로명주소']}</span>", unsafe_allow_html=True)
+        
+        # 메모 (위치 아래)
         if pd.notna(row["메모"]) and row["메모"].strip() != "":
             st.caption(f"📝 {row['메모']}")
-
-        if pd.notna(row["위치"]):
-            cols = st.columns([4, 1.5])
-            with cols[0]:
-                st.markdown(f"<span style='color:{color}'>⬤</span> {row['위치']}", unsafe_allow_html=True)
-            with cols[1]:
-                if st.button("세부주소 보기", key=f"show_address_btn_{i}"):
-                    if pd.notna(row["도로명주소"]):
-                        st.markdown(f"➡️ `{row['도로명주소']}`")
 else:
     st.info("오프라인 일정이 없습니다.")
+
 
 # -------------------------------
 # 🗺️ 지도 표시 (오프라인 일정만)
