@@ -1,88 +1,80 @@
-from datetime import datetime
 import streamlit as st
 import pandas as pd
-from streamlit_calendar import calendar
-from streamlit_folium import st_folium
-import folium
-from geopy.geocoders import Nominatim
+import datetime
+import calendar
 
-st.set_page_config(page_title="볼빨간사춘기 일정 보기", layout="centered")
-st.markdown("## 🎵 볼빨간사춘기 일정 보기")
+st.set_page_config(page_title="📆 볼빨간사춘기 일정", layout="centered")
+st.markdown("## 📅 볼빨간사춘기 전체 달력")
 
-# Load data
-DATA_PATH = "schedule.csv"
-df = pd.read_csv(DATA_PATH)
-df['날짜'] = pd.to_datetime(df['날짜']).dt.date
+# CSV 로드
+df = pd.read_csv("schedule.csv")
+df["날짜"] = pd.to_datetime(df["날짜"]).dt.date
 
-# Display full calendar
-events = []
-for i, row in df.iterrows():
-    events.append({
-        "title": row['내용'],
-        "start": str(row['날짜']),
-        "end": str(row['날짜']),
-    })
+# 한 달 달력 만들기
+today = datetime.date.today()
+year = today.year
+month = today.month
+cal = calendar.Calendar()
+month_days = list(cal.itermonthdates(year, month))
 
-calendar_result = calendar(
-    events=events,
-    options={
-        "initialView": "dayGridMonth",
-        "locale": "ko",
-        "height": 600,
-        "headerToolbar": {
-            "start": "prev,next today",
-            "center": "title",
-            "end": ""
-        }
-    },
-)
+# 클릭 감지용 변수
+clicked_date = None
 
-# ✅ 날짜 클릭이 아닌 "이벤트 클릭" 기준으로 처리
-selected_event = calendar_result.get("event")
-if selected_event and selected_event.get("start"):
-    selected_date = datetime.strptime(selected_event["start"][:10], "%Y-%m-%d").date()
-    st.markdown(f"### 📅 {selected_date} 일정")
+# 달력 출력
+cols = st.columns(7)
+day_labels = ["일", "월", "화", "수", "목", "금", "토"]
+for i, label in enumerate(day_labels):
+    cols[i].markdown(f"**{label}**")
 
-    df_sel = df[df["날짜"] == selected_date]
+for week_start in range(0, len(month_days), 7):
+    cols = st.columns(7)
+    for i in range(7):
+        day = month_days[week_start + i]
+        if day.month != month:
+            cols[i].markdown(" ")
+        else:
+            day_events = df[df["날짜"] == day]
+            if not day_events.empty:
+                if cols[i].button(f"{day.day}\n📌"):
+                    clicked_date = day
+            else:
+                if cols[i].button(str(day.day)):
+                    clicked_date = day
 
-    if "내용" in df_sel.columns:
-        df_sel_online = df_sel[df_sel["내용"].str.contains("온라인", na=False)]
-        df_sel_offline = df_sel[~df_sel["내용"].str.contains("온라인", na=False)]
-    else:
-        st.error("⚠️ '내용' 컬럼이 schedule.csv에 없습니다.")
-        st.stop()
+# 클릭된 날짜 일정 표시
+if clicked_date:
+    st.markdown(f"### 📍 {clicked_date} 일정")
+    df_sel = df[df["날짜"] == clicked_date]
 
-    # 오프라인 일정
-    st.markdown("#### 🏟️ 오프라인 일정")
-    if not df_sel_offline.empty:
-        for _, row in df_sel_offline.iterrows():
-            st.markdown(f"- **{row['위치']}**  \n"
-                        f"  {row['도로명주소']}  \n"
-                        f"  {row['시간']}  \n"
-                        f"  {row['내용']}")
-        
+    df_online = df_sel[df_sel["내용"].str.contains("온라인", na=False)]
+    df_offline = df_sel[~df_sel["내용"].str.contains("온라인", na=False)]
+
+    if not df_online.empty:
+        st.markdown("#### 💻 온라인 일정")
+        for _, row in df_online.iterrows():
+            st.markdown(f"- {row['시간']} {row['내용']}")
+    if not df_offline.empty:
+        st.markdown("#### 🏟️ 오프라인 일정")
+        for _, row in df_offline.iterrows():
+            st.markdown(f"- {row['시간']} {row['내용']} ({row['위치']})")
+
         # 지도
-        geolocator = Nominatim(user_agent="schedule_app")
+        from geopy.geocoders import Nominatim
+        from streamlit_folium import st_folium
+        import folium
+
+        geolocator = Nominatim(user_agent="bol4_schedule")
         m = folium.Map(location=[36.5, 127.9], zoom_start=7)
-        for _, row in df_sel_offline.iterrows():
-            location = geolocator.geocode(row["도로명주소"])
-            if location:
+
+        for _, row in df_offline.iterrows():
+            loc = geolocator.geocode(row["도로명주소"])
+            if loc:
                 folium.Marker(
-                    location=[location.latitude, location.longitude],
+                    location=[loc.latitude, loc.longitude],
                     popup=row["위치"],
                     tooltip=row["내용"]
                 ).add_to(m)
 
-        st_folium(m, width=1200, height=600)
-    else:
-        st.markdown("- 해당 날짜에 오프라인 일정이 없습니다.")
-
-    # 온라인 일정
-    st.markdown("#### 💻 온라인 일정")
-    if not df_sel_online.empty:
-        for _, row in df_sel_online.iterrows():
-            st.markdown(f"- {row['시간']}  \n  {row['내용']}")
-    else:
-        st.markdown("- 해당 날짜에 온라인 일정이 없습니다.")
+        st_folium(m, width=1100, height=600)
 else:
-    st.info("📅 캘린더에서 일정을 클릭하면 세부 내용을 볼 수 있어요!")
+    st.info("날짜를 눌러 일정을 확인하세요.")
