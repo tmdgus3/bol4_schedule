@@ -3,82 +3,67 @@ import pandas as pd
 import datetime
 import folium
 from streamlit_folium import st_folium
-import os
+from io import StringIO
 
-# --- 기본 설정 ---
-st.set_page_config(page_title="일정 지도", layout="wide")
+# --- CSV 파일 로딩 ---
+@st.cache_data
+def load_schedule():
+    return pd.read_csv("schedule.csv")
 
-# --- 파일 경로 및 데이터 불러오기 ---
-DATA_PATH = "schedule.csv"
-df = pd.read_csv(DATA_PATH)
+# --- 날짜 파싱 및 분리 ---
+def parse_schedule(df):
+    df["날짜"] = pd.to_datetime(df["날짜"])
+    df_online = df[df["내용"].str.contains("온라인")].copy()
+    df_offline = df[~df["내용"].str.contains("온라인")].copy()
+    return df_online, df_offline
 
-# 날짜 형식 변환
-df["날짜"] = pd.to_datetime(df["날짜"]).dt.date
-
-# 온라인/오프라인 구분
-online_df = df[df["내용"].str.contains("온라인")]
-offline_df = df[~df["내용"].str.contains("온라인")]
-
-# 현재 선택된 날짜 (전체 달력 표시)
-today = datetime.date.today()
-selected_date = st.date_input("날짜 선택", value=today)
-
-# --- 상단: 일정 표시 ---
-st.markdown("## 📅 일정 보기")
-
-selected_online = online_df[online_df["날짜"] == selected_date]
-selected_offline = offline_df[offline_df["날짜"] == selected_date]
-
-if selected_online.empty and selected_offline.empty:
-    st.info("해당 날짜에는 일정이 없습니다.")
-else:
-    if not selected_offline.empty:
-        st.markdown("### ⬤ 오프라인 일정")
-        for _, row in selected_offline.iterrows():
-            st.markdown(
-                f"""**{row['내용']}**  
-⬤ {row['위치']}  
+# --- 일정 렌더링 함수 ---
+def render_schedule(df, title):
+    if df.empty:
+        st.markdown(f"#### {title}\n- 해당 날짜에 일정이 없습니다.")
+        return
+    st.markdown(f"#### {title}")
+    for _, row in df.iterrows():
+        st.markdown(f"""
+**⬤ {row['위치']}**  
 &nbsp;&nbsp;&nbsp;&nbsp;{row['도로명주소']}  
-&nbsp;&nbsp;&nbsp;&nbsp;{row['메모'] if pd.notna(row['메모']) else ''}  
-"""
-            )
-
-    if not selected_online.empty:
-        st.markdown("### 🌐 온라인 일정")
-        for _, row in selected_online.iterrows():
-            st.markdown(
-                f"""**{row['내용']}**  
-🌐 온라인 일정  
-&nbsp;&nbsp;&nbsp;&nbsp;{row['메모'] if pd.notna(row['메모']) else ''}  
-"""
-            )
+&nbsp;&nbsp;&nbsp;&nbsp;{row['메모']}  
+🕒 {row['시간']}  
+📝 {row['내용']}  
+        """)
 
 # --- 지도 표시 ---
-st.markdown("## 📍 지도 보기")
-if not offline_df.empty:
-    # 지도 중심은 대한민국 중앙 좌표 (위도, 경도)
-    map_center = [36.5, 127.5]
-    m = folium.Map(location=map_center, zoom_start=7)
+def render_map(df):
+    if df.empty:
+        return
+    m = folium.Map(location=[36.5, 127.8], zoom_start=7)
+    colors = ["red", "blue", "green", "purple", "orange"]
+    for i, (_, row) in enumerate(df.iterrows()):
+        folium.Marker(
+            location=None,  # 주소를 기반으로 좌표 변환이 필요한 경우 geopy 등 필요
+            tooltip=row["위치"],
+            popup=f"{row['내용']}\n{row['도로명주소']}",
+            icon=folium.Icon(color=colors[i % len(colors)])
+        ).add_to(m)
+    st_folium(m, width=1200, height=600)
 
-    # 핀 색상 리스트
-    color_list = [
-        "red", "blue", "green", "orange", "purple",
-        "darkred", "cadetblue", "darkgreen", "black", "pink"
-    ]
+# --- 메인 앱 ---
+st.set_page_config(layout="wide")
+st.title("🎵 볼빨간사춘기 일정 보기")
 
-    for i, (_, row) in enumerate(offline_df.iterrows()):
-        if pd.notna(row["도로명주소"]):
-            # 각 장소에 대해 마커 추가
-            tooltip = f"{row['내용']} - {row['위치']}"
-            popup = f"{row['위치']}<br>{row['도로명주소']}<br>{row['메모'] if pd.notna(row['메모']) else ''}"
-            folium.Marker(
-                location=None,  # Geocoding 필요 시 수정
-                tooltip=tooltip,
-                popup=popup,
-                icon=folium.Icon(color=color_list[i % len(color_list)])
-            ).add_to(m)
+# 전체 스케줄 불러오기
+df_all = load_schedule()
+df_online, df_offline = parse_schedule(df_all)
 
-    # 지도 출력
-    st_data = st_folium(m, width=1200, height=600)
-else:
-    st.warning("오프라인 일정이 없어 지도를 표시할 수 없습니다.")
+# 날짜 목록 추출 및 달력 표시
+available_dates = sorted(df_all["날짜"].dt.date.unique())
+selected_date = st.date_input("날짜 선택", value=datetime.date.today())
+
+# 선택된 날짜의 일정 필터링
+df_sel_online = df_online[df_online["날짜"].dt.date == selected_date]
+df_sel_offline = df_offline[df_offline["날짜"].dt.date == selected_date]
+
+# 일정 및 지도 표시
+render_schedule(df_sel_offline, "오프라인 일정")
+render_schedule(df_sel_online, "온라인 일정")
+render_map(df_sel_offline)
