@@ -1,93 +1,84 @@
 import streamlit as st
 import pandas as pd
+import datetime
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
-import datetime
 import os
 
-# 📁 데이터 경로
+# --- 기본 설정 ---
+st.set_page_config(page_title="일정 지도", layout="wide")
+
+# --- 파일 경로 및 데이터 불러오기 ---
 DATA_PATH = "schedule.csv"
+df = pd.read_csv(DATA_PATH)
 
-# 📍 색상 설정
-pin_colors = ["red", "blue", "green", "purple", "orange", "darkred", "cadetblue", "darkgreen"]
+# 날짜 형식 변환
+df["날짜"] = pd.to_datetime(df["날짜"]).dt.date
 
-# 📄 데이터 로드
-@st.cache_data
-def load_data():
-    if not os.path.exists(DATA_PATH):
-        return pd.DataFrame(columns=["날짜", "시간", "내용", "메모", "위치", "도로명주소"])
-    df = pd.read_csv(DATA_PATH)
-    df["날짜"] = pd.to_datetime(df["날짜"]).dt.date
-    return df
+# 온라인/오프라인 구분
+online_df = df[df["내용"].str.contains("온라인")]
+offline_df = df[~df["내용"].str.contains("온라인")]
 
-df = load_data()
-online_df = df[df["도로명주소"].isna() | (df["도로명주소"].str.strip() == "")]
-offline_df = df[~df.index.isin(online_df.index)]
+# 현재 선택된 날짜 (전체 달력 표시)
+today = datetime.date.today()
+selected_date = st.date_input("날짜 선택", value=today)
 
-# 📅 Streamlit 시작
-st.set_page_config(page_title="볼빨간사춘기 스케줄 관리", layout="wide")
-st.title("📅 볼빨간사춘기 스케줄 관리")
-
-# 최종 수정일
-if os.path.exists(DATA_PATH):
-    modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(DATA_PATH))
-    st.caption(f"📌 최종 수정일: {modified_time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-# 📆 달력 위젯 (일정 있는 날짜만 선택 가능)
-available_dates = sorted(df["날짜"].unique())
-selected_date = st.date_input(
-    "날짜 선택", value=datetime.date.today(), min_value=min(available_dates),
-    max_value=max(available_dates), label_visibility="collapsed"
-)
-
-# 📌 세부 일정
-st.markdown(f"## 📌 {selected_date.strftime('%Y-%m-%d')} 일정")
+# --- 상단: 일정 표시 ---
+st.markdown("## 📅 일정 보기")
 
 selected_online = online_df[online_df["날짜"] == selected_date]
 selected_offline = offline_df[offline_df["날짜"] == selected_date]
 
-# 🏟️ 오프라인 일정
-st.subheader("🏟️ 오프라인 일정")
-if not selected_offline.empty:
-    for i, row in selected_offline.iterrows():
-        color = pin_colors[i % len(pin_colors)]
-        st.markdown(f"**{row['시간']} - {row['내용']}**")
-        st.markdown(f"⬤ <span style='color:{color}'>{row['위치']}</span>", unsafe_allow_html=True)
-        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{row['도로명주소']}", unsafe_allow_html=True)
-        if pd.notna(row["메모"]) and row["메모"].strip():
-            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{row['메모']}", unsafe_allow_html=True)
+if selected_online.empty and selected_offline.empty:
+    st.info("해당 날짜에는 일정이 없습니다.")
 else:
-    st.info("해당 날짜에 오프라인 일정이 없습니다.")
+    if not selected_offline.empty:
+        st.markdown("### ⬤ 오프라인 일정")
+        for _, row in selected_offline.iterrows():
+            st.markdown(
+                f"""**{row['내용']}**  
+⬤ {row['위치']}  
+&nbsp;&nbsp;&nbsp;&nbsp;{row['도로명주소']}  
+&nbsp;&nbsp;&nbsp;&nbsp;{row['메모'] if pd.notna(row['메모']) else ''}  
+"""
+            )
 
-# 💻 온라인 일정
-st.subheader("💻 온라인 일정")
-if not selected_online.empty:
-    for i, row in selected_online.iterrows():
-        st.markdown(f"**{row['시간']} - {row['내용']}**")
-        st.markdown(f"⬤ {row['위치']}")
-        if pd.notna(row["메모"]) and row["메모"].strip():
-            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{row['메모']}")
+    if not selected_online.empty:
+        st.markdown("### 🌐 온라인 일정")
+        for _, row in selected_online.iterrows():
+            st.markdown(
+                f"""**{row['내용']}**  
+🌐 온라인 일정  
+&nbsp;&nbsp;&nbsp;&nbsp;{row['메모'] if pd.notna(row['메모']) else ''}  
+"""
+            )
+
+# --- 지도 표시 ---
+st.markdown("## 📍 지도 보기")
+if not offline_df.empty:
+    # 지도 중심은 대한민국 중앙 좌표 (위도, 경도)
+    map_center = [36.5, 127.5]
+    m = folium.Map(location=map_center, zoom_start=7)
+
+    # 핀 색상 리스트
+    color_list = [
+        "red", "blue", "green", "orange", "purple",
+        "darkred", "cadetblue", "darkgreen", "black", "pink"
+    ]
+
+    for i, (_, row) in enumerate(offline_df.iterrows()):
+        if pd.notna(row["도로명주소"]):
+            # 각 장소에 대해 마커 추가
+            tooltip = f"{row['내용']} - {row['위치']}"
+            popup = f"{row['위치']}<br>{row['도로명주소']}<br>{row['메모'] if pd.notna(row['메모']) else ''}"
+            folium.Marker(
+                location=None,  # Geocoding 필요 시 수정
+                tooltip=tooltip,
+                popup=popup,
+                icon=folium.Icon(color=color_list[i % len(color_list)])
+            ).add_to(m)
+
+    # 지도 출력
+    st_data = st_folium(m, width=1200, height=600)
 else:
-    st.info("해당 날짜에 온라인 일정이 없습니다.")
-
-# 🗺️ 지도 (디폴트 중앙 위치, 줌만 설정)
-st.subheader("🗺️ 오프라인 위치 보기")
-geolocator = Nominatim(user_agent="bol4_schedule_app")
-m = folium.Map(location=[36.5, 127.8], zoom_start=7)
-
-for i, row in offline_df.iterrows():
-    color = pin_colors[i % len(pin_colors)]
-    if pd.notna(row["도로명주소"]):
-        try:
-            location = geolocator.geocode(row["도로명주소"])
-            if location:
-                folium.Marker(
-                    location=[location.latitude, location.longitude],
-                    popup=row["내용"],
-                    icon=folium.Icon(color=color, icon="info-sign")
-                ).add_to(m)
-        except:
-            continue
-
-st_folium(m, width=800, height=450)
+    st.warning("오프라인 일정이 없어 지도를 표시할 수 없습니다.")
