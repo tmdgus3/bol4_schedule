@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
 import datetime
@@ -6,98 +8,99 @@ from geopy.geocoders import Nominatim
 from streamlit_folium import st_folium
 import folium
 
-# 페이지 설정
-st.set_page_config(page_title="📆 볼빨간사춘기 일정", layout="centered")
-st.markdown("## 📅 볼빨간사춘기 전체 달력")
+st.set_page_config(layout="centered", page_title="📆 BOL4 일정 캘린더")
 
-# CSV 불러오기
-df = pd.read_csv("schedule.csv")
-df["날짜"] = pd.to_datetime(df["날짜"]).dt.date
+# Load data
+@st.cache_data
+def load_schedule():
+    df = pd.read_csv("schedule.csv")
+    df["날짜"] = pd.to_datetime(df["날짜"]).dt.date
+    return df
 
-# 세션 상태 초기화
-if "year" not in st.session_state:
-    st.session_state.year = datetime.date.today().year
-if "month" not in st.session_state:
-    st.session_state.month = datetime.date.today().month
-if "clicked_date" not in st.session_state:
-    st.session_state.clicked_date = None
+df = load_schedule()
 
-# 월/년 이동 버튼
-col1, col2, col3 = st.columns([1, 2, 1])
-with col1:
-    if st.button("⬅️ 이전달"):
-        if st.session_state.month == 1:
-            st.session_state.month = 12
-            st.session_state.year -= 1
-        else:
-            st.session_state.month -= 1
+# 현재 연도와 월
+today = datetime.date.today()
+year, month = today.year, today.month
 
-with col3:
-    if st.button("다음달 ➡️"):
-        if st.session_state.month == 12:
-            st.session_state.month = 1
-            st.session_state.year += 1
-        else:
-            st.session_state.month += 1
+# 달력 출력
+def render_calendar(df, year, month):
+    st.markdown(f"<h2 style='text-align: center;'>📅 {year}년 {month}월</h2>", unsafe_allow_html=True)
+    cal = calendar.Calendar(firstweekday=6)
+    month_days = cal.monthdatescalendar(year, month)
+    colnames = ['일', '월', '화', '수', '목', '금', '토']
 
-with col2:
-    st.markdown(f"<h4 style='text-align:center'>{st.session_state.year}년 {st.session_state.month}월</h4>", unsafe_allow_html=True)
-
-# 달력 그리기
-cal = calendar.Calendar()
-month_days = list(cal.itermonthdates(st.session_state.year, st.session_state.month))
-
-day_labels = ["일", "월", "화", "수", "목", "금", "토"]
-cols = st.columns(7)
-for i, label in enumerate(day_labels):
-    cols[i].markdown(f"<div style='text-align:center; font-weight:bold;'>{label}</div>", unsafe_allow_html=True)
-
-for week_start in range(0, len(month_days), 7):
     cols = st.columns(7)
-    for i in range(7):
-        day = month_days[week_start + i]
-        style = "width:100%; height:60px; text-align:center; border-radius:6px; border:1px solid #ccc; margin:2px; font-size:16px;"
-        day_events = df[df["날짜"] == day]
-        if day.month != st.session_state.month:
-            cols[i].markdown(" ")
-        else:
-            with cols[i].form(key=f"form_{day}"):
-                btn = st.form_submit_button(
-                    label=f"{day.day}\n{'📌' if not day_events.empty else ''}"
-                )
-                if btn:
-                    st.session_state.clicked_date = day
+    for i, col in enumerate(cols):
+        with col:
+            st.markdown(f"<div style='text-align: center; font-weight: bold;'>{colnames[i]}</div>", unsafe_allow_html=True)
 
-# 클릭된 날짜 일정 보기
-if st.session_state.clicked_date:
-    clicked_day = st.session_state.clicked_date
-    st.markdown(f"### 📍 {clicked_day} 일정")
+    for week in month_days:
+        cols = st.columns(7)
+        for i, date in enumerate(week):
+            with cols[i]:
+                if date.month != month:
+                    st.markdown(" ")
+                else:
+                    events_exist = not df[df["날짜"] == date].empty
+                    button_label = f"**{date.day}**" if events_exist else str(date.day)
+                    if st.button(button_label, key=str(date)):
+                        st.session_state["selected_date"] = date
 
-    df_sel = df[df["날짜"] == clicked_day]
-    df_online = df_sel[df_sel["내용"].str.contains("온라인", na=False)]
-    df_offline = df_sel[~df_sel["내용"].str.contains("온라인", na=False)]
+# 일정 출력
+def show_schedule(df, selected_date):
+    df_day = df[df["날짜"] == selected_date]
+    if df_day.empty:
+        st.info("이 날에는 등록된 일정이 없습니다.")
+        return
 
-    if not df_online.empty:
-        st.markdown("#### 💻 온라인 일정")
-        for _, row in df_online.iterrows():
-            st.markdown(f"- {row['시간']} {row['내용']}")
+    df_online = df_day[df_day["내용"].str.contains("온라인", na=False)]
+    df_offline = df_day[~df_day["내용"].str.contains("온라인", na=False)]
 
     if not df_offline.empty:
-        st.markdown("#### 🏟️ 오프라인 일정")
+        st.subheader("📍 오프라인 일정")
         for _, row in df_offline.iterrows():
-            st.markdown(f"- {row['시간']} {row['내용']} ({row['위치']})")
+            st.markdown(f"""
+            **🗓 {row['내용']}**
 
-        # 지도 표시
-        geolocator = Nominatim(user_agent="bol4_schedule")
-        m = folium.Map(location=[36.5, 127.9], zoom_start=7)
-        for _, row in df_offline.iterrows():
-            loc = geolocator.geocode(row["도로명주소"])
-            if loc:
+            위치: `{row['위치']}`  
+            {row['메모'] if pd.notna(row['메모']) and row['메모'] else ''}
+            """)
+        show_map(df_offline)
+
+    if not df_online.empty:
+        st.subheader("💻 온라인 일정")
+        for _, row in df_online.iterrows():
+            st.markdown(f"""
+            **🗓 {row['내용']}**
+
+            {row['메모'] if pd.notna(row['메모']) and row['메모'] else ''}
+            """)
+
+# 지도 출력
+def show_map(df_offline):
+    if df_offline.empty:
+        return
+    geolocator = Nominatim(user_agent="calendar-app")
+    m = folium.Map(location=[36.5, 127.9], zoom_start=7)
+    for _, row in df_offline.iterrows():
+        try:
+            location = geolocator.geocode(row["도로명주소"])
+            if location:
                 folium.Marker(
-                    location=[loc.latitude, loc.longitude],
+                    location=[location.latitude, location.longitude],
                     popup=row["위치"],
-                    tooltip=row["내용"]
+                    icon=folium.Icon(color="blue")
                 ).add_to(m)
-        st_folium(m, width=1100, height=600)
-else:
-    st.info("날짜를 눌러 일정을 확인하세요.")
+        except:
+            continue
+    st_folium(m, width=800, height=500)
+
+# 앱 실행
+st.title("🎤 볼사 일정 달력")
+render_calendar(df, year, month)
+
+if "selected_date" in st.session_state:
+    st.markdown("---")
+    st.markdown(f"### 📌 {st.session_state['selected_date']} 일정")
+    show_schedule(df, st.session_state["selected_date"])
