@@ -1,29 +1,26 @@
+from datetime import datetime
 import streamlit as st
 import pandas as pd
 from streamlit_calendar import calendar
-from datetime import datetime
 from streamlit_folium import st_folium
 import folium
 from geopy.geocoders import Nominatim
 
 st.set_page_config(page_title="볼빨간사춘기 일정 보기", layout="centered")
-
 st.markdown("## 🎵 볼빨간사춘기 일정 보기")
 
-# CSV 불러오기
+# Load data
 DATA_PATH = "schedule.csv"
 df = pd.read_csv(DATA_PATH)
 df['날짜'] = pd.to_datetime(df['날짜']).dt.date
 
-# 캘린더 표시
+# Display full calendar
 events = []
 for i, row in df.iterrows():
-    date = row['날짜']
-    title = row['내용']
     events.append({
-        "title": title,
-        "start": str(date),
-        "end": str(date)
+        "title": row['내용'],
+        "start": str(row['날짜']),
+        "end": str(row['날짜']),
     })
 
 calendar_result = calendar(
@@ -38,21 +35,16 @@ calendar_result = calendar(
             "end": ""
         }
     },
-    custom_css="""
-    .fc-toolbar-title { font-size: 24px; font-weight: bold; }
-    """
 )
 
-# 선택된 날짜 확인
-selected_date_str = calendar_result.get("date")
-if selected_date_str:
-    selected_date = datetime.strptime(selected_date_str[:10], "%Y-%m-%d").date()
+# ✅ 날짜 클릭이 아닌 "이벤트 클릭" 기준으로 처리
+selected_event = calendar_result.get("event")
+if selected_event and selected_event.get("start"):
+    selected_date = datetime.strptime(selected_event["start"][:10], "%Y-%m-%d").date()
     st.markdown(f"### 📅 {selected_date} 일정")
 
-    # 선택 날짜 필터링
     df_sel = df[df["날짜"] == selected_date]
 
-    # 오프라인 / 온라인 구분
     if "내용" in df_sel.columns:
         df_sel_online = df_sel[df_sel["내용"].str.contains("온라인", na=False)]
         df_sel_offline = df_sel[~df_sel["내용"].str.contains("온라인", na=False)]
@@ -69,13 +61,11 @@ if selected_date_str:
                         f"  {row['시간']}  \n"
                         f"  {row['내용']}")
         
-        # 지도 표시
+        # 지도
         geolocator = Nominatim(user_agent="schedule_app")
-        m = folium.Map(location=[36.5, 127.9], zoom_start=7)  # 대한민국 중심
-        
+        m = folium.Map(location=[36.5, 127.9], zoom_start=7)
         for _, row in df_sel_offline.iterrows():
-            address = row["도로명주소"]
-            location = geolocator.geocode(address)
+            location = geolocator.geocode(row["도로명주소"])
             if location:
                 folium.Marker(
                     location=[location.latitude, location.longitude],
@@ -84,7 +74,6 @@ if selected_date_str:
                 ).add_to(m)
 
         st_folium(m, width=1200, height=600)
-
     else:
         st.markdown("- 해당 날짜에 오프라인 일정이 없습니다.")
 
@@ -96,4 +85,4 @@ if selected_date_str:
     else:
         st.markdown("- 해당 날짜에 온라인 일정이 없습니다.")
 else:
-    st.info("달력에서 날짜를 클릭하면 해당 날짜의 일정이 표시됩니다.")
+    st.info("📅 캘린더에서 일정을 클릭하면 세부 내용을 볼 수 있어요!")
