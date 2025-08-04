@@ -26,7 +26,7 @@ def save_schedule(df):
 df = load_schedule()
 
 # --- 제목 ---
-st.title("📅 일정 캘린더 + 지도")
+st.title("볼빨간사춘기 오프 스케줄")
 
 # --- 일정 목록 ---
 if not df.empty:
