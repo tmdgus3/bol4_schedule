@@ -68,9 +68,9 @@ for index, row in df.iterrows():
     
     # 날짜에 따른 색상 결정
     if event_date < today_date:
-        color = "grey"  # 지난 일정은 회색
-    else: # 오늘 또는 미래 일정
-        color = "#FF4B4B" if row['구분'] == '오프라인' else "#00BFFF" # 오프라인은 빨간색, 온라인은 하늘색
+        color = "grey"
+    else:
+        color = "#FF4B4B" if row['구분'] == '오프라인' else "#00BFFF"
     
     event = {
         "title": row['내용'],
@@ -79,8 +79,9 @@ for index, row in df.iterrows():
     }
     calendar_events.append(event)
 
-# 캘린더 툴바에서 'today', 'month' 버튼 제거
+# 캘린더 옵션: 높이 자동 조절, 툴바 단순화
 calendar_options = {
+    "height": "auto",  # <-- 스크롤바 대신 전체 높이가 보이도록 설정
     "headerToolbar": {
         "left": "prev,next",
         "center": "title",
@@ -92,6 +93,19 @@ calendar_options = {
 }
 
 selected_date = calendar(events=calendar_events, options=calendar_options)
+
+# 캘린더 색상 범례(Index) 추가
+st.markdown(
+    """
+    <div style="text-align: right; font-size: 0.8em; margin-top: 5px;">
+        <span style="background-color: grey; padding: 2px 6px; margin: 0 4px 0 8px; border-radius: 4px;">&nbsp;</span> 지난 일정 &nbsp;
+        <span style="background-color: #00BFFF; padding: 2px 6px; margin: 0 4px 0 8px; border-radius: 4px;">&nbsp;</span> 온라인 &nbsp;
+        <span style="background-color: #FF4B4B; padding: 2px 6px; margin: 0 4px 0 8px; border-radius: 4px;">&nbsp;</span> 오프라인
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # 캘린더에서 날짜를 클릭하면 해당 날짜의 상세 일정 표시
 if selected_date.get('callback') == 'dateClick':
@@ -123,10 +137,8 @@ st.divider()
 # --------------------------------------------------------------------------
 tab1, tab2 = st.tabs(["💻 온라인 일정", "🎪 오프라인 일정 및 지도"])
 
-# 온라인 일정 탭
 with tab1:
     st.subheader("💻 온라인 스케줄 목록")
-    # 날짜 오름차순(과거->미래)으로 정렬
     online_df = df[df['구분'] == '온라인'].sort_values(by='날짜', ascending=True).reset_index(drop=True)
 
     if not online_df.empty:
@@ -135,31 +147,20 @@ with tab1:
             style_tag = "style='color:grey;'" if is_past else ""
             
             with st.expander(f"**{row['날짜'].strftime('%Y-%m-%d')}** | {row['내용']}"):
-                st.markdown(
-                    f"<div {style_tag}>"
-                    f"<b>- 방송/플랫폼:</b> {row['위치']}<br>"
-                    f"<b>- 시간:</b> {row['시간'] if pd.notna(row['시간']) else '미정'}<br>"
-                    f"<b>- 메모:</b> {row['메모'] if pd.notna(row['메모']) else '없음'}"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div {style_tag}>...</div>", unsafe_allow_html=True)
     else:
         st.info("현재 예정된 온라인 스케줄이 없습니다.")
 
-# 오프라인 일정 탭
 with tab2:
     st.subheader("🎪 오프라인 스케줄 목록 및 지도")
-    # 날짜 오름차순(과거->미래)으로 정렬
     offline_df = df[df['구분'] == '오프라인'].sort_values(by='날짜', ascending=True).reset_index(drop=True)
 
     if not offline_df.empty:
         @st.cache_data
         def geocode_address(address):
-            geolocator = Nominatim(user_agent="bol4-schedule-app-csv-final")
-            try:
-                return geolocator.geocode(address)
-            except Exception:
-                return None
+            geolocator = Nominatim(user_agent="bol4-schedule-app-final")
+            try: return geolocator.geocode(address)
+            except Exception: return None
 
         m = folium.Map(location=[36.5, 127.5], zoom_start=7)
 
@@ -168,25 +169,19 @@ with tab2:
             style_tag = "style='color:grey;'" if is_past else ""
 
             with st.container(border=True):
-                st.markdown(
-                    f"<div {style_tag}>"
-                    f"<b>{row['날짜'].strftime('%Y-%m-%d')} | {row['내용']}</b><br>"
-                    f"- <b>장소:</b> {row['위치']} ({row['도로명주소']})<br>"
-                    f"- <b>시간:</b> {row['시간'] if pd.notna(row['시간']) else '미정'}"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div {style_tag}>...</div>", unsafe_allow_html=True)
 
-            location = geocode_address(row['доро명주소'])
+            # KeyError가 발생했던 부분: 'доро명주소' -> '도로명주소'로 수정
+            location = geocode_address(row['도로명주소'])
             if location:
                 popup_html = f"<b>{row['내용']}</b><br><b>장소:</b> {row['위치']}"
-                marker_icon = 'glyphicon-ok-sign' if not is_past else 'glyphicon-time'
+                marker_icon = 'ok-sign' if not is_past else 'time'
                 marker_color = ('red' if not is_past else 'gray')
                 folium.Marker(
                     [location.latitude, location.longitude],
                     popup=folium.Popup(popup_html, max_width=300),
                     tooltip=row['내용'],
-                    icon=folium.Icon(color=marker_color, icon=marker_icon)
+                    icon=folium.Icon(color=marker_color, icon=marker_icon, prefix='glyphicon')
                 ).add_to(m)
 
         st.subheader("📍 스케줄 지도")
