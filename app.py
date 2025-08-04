@@ -12,12 +12,12 @@ import os
 # 페이지 기본 설정
 # --------------------------------------------------------------------------
 st.set_page_config(
-    page_title="볼빨간사춘기 온오프라인 스케줄",
+    page_title="볼빨간사춘기 온오프 스케줄",
     page_icon="🎤",
     layout="wide",
 )
 
-st.title("🎤 볼빨간사춘기 온오프라인 스케줄")
+st.title("볼빨간사춘기 온오프 스케줄")
 
 # 'schedule.csv' 파일의 최종 수정 시간을 기준으로 업데이트 시간 표시
 KST = pytz.timezone('Asia/Seoul')
