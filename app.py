@@ -5,6 +5,7 @@ from streamlit_folium import st_folium
 from streamlit_calendar import calendar
 from geopy.geocoders import Nominatim
 from datetime import datetime
+import pytz # 시간대 처리를 위해 pytz 라이브러리 import
 
 # --------------------------------------------------------------------------
 # 페이지 기본 설정
@@ -16,22 +17,20 @@ st.set_page_config(
 )
 
 st.title("🎤 볼빨간사춘기 온오프라인 스케줄")
-st.caption(f"데이터 최종 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+# 정확한 한국 시간(KST)을 표시하도록 수정
+KST = pytz.timezone('Asia/Seoul')
+st.caption(f"데이터 최종 업데이트: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
 # --------------------------------------------------------------------------
 # CSV 데이터 로드 및 전처리
 # --------------------------------------------------------------------------
-# @st.cache_data를 사용해 앱 재실행 시 불필요한 파일 재로딩을 방지합니다.
 @st.cache_data
 def load_data():
     """schedule.csv 파일에서 스케줄 데이터를 불러와 DataFrame으로 변환합니다."""
     try:
-        # GitHub 저장소에 함께 있는 schedule.csv 파일을 읽어옵니다.
         df = pd.read_csv("schedule.csv")
-
-        # 데이터 전처리
         df['날짜'] = pd.to_datetime(df['날짜']).dt.date
-        # '도로명주소'가 비어있으면 '온라인', 아니면 '오프라인'으로 '구분' 열 추가
         df['구분'] = df['도로명주소'].apply(lambda x: '온라인' if pd.isna(x) or x == '' else '오프라인')
         return df
     except FileNotFoundError:
@@ -51,23 +50,24 @@ if df.empty:
 # --------------------------------------------------------------------------
 # 1. 캘린더 뷰 (전체 일정)
 # --------------------------------------------------------------------------
-st.header("🗓️ 전체 스케줄 (캘린더)")
+st.header("🗓️ 전체 스케줄")
 
-# streamlit-calendar에 맞는 형식으로 데이터 가공
+# 캘린더 이벤트 제목에서 [온라인/오프라인] 텍스트 제거
 calendar_events = []
 for index, row in df.iterrows():
     event = {
-        "title": f"[{row['구분']}] {row['내용']}",
+        "title": row['내용'], # <-- 내용만 표시하도록 수정
         "start": row['날짜'].strftime("%Y-%m-%d"),
-        "color": "#FF4B4B" if row['구분'] == '오프라인' else "#00BFFF", # 오프라인은 빨간색, 온라인은 파란색
+        "color": "#FF4B4B" if row['구분'] == '오프라인' else "#00BFFF",
     }
     calendar_events.append(event)
 
+# 캘린더 툴바에서 week, day 버튼 제거
 calendar_options = {
     "headerToolbar": {
         "left": "prev,next today",
         "center": "title",
-        "right": "dayGridMonth,timeGridWeek,timeGridDay",
+        "right": "dayGridMonth", # <-- 월(Month) 보기만 남김
     },
     "initialView": "dayGridMonth",
     "events": calendar_events,
@@ -98,7 +98,7 @@ if selected_date.get('callback') == 'dateClick':
     if not day_schedule.empty:
         for _, row in day_schedule.iterrows():
             badge_color = "red" if row['구분'] == "오프라인" else "blue"
-            st.markdown(f"##### <span style='color:{badge_color};'>●</span> **{row['내용']}**", unsafe_allow_html=True)
+            st.markdown(f"##### <span style='color:{badge_color};'>●</span> **{row['내용']}** ({row['구분']})", unsafe_allow_html=True)
             
             details = f"""
             - **시간:** {row['시간'] if pd.notna(row['시간']) else '미정'}
@@ -122,10 +122,10 @@ st.divider()
 # --------------------------------------------------------------------------
 tab1, tab2 = st.tabs(["💻 온라인 일정", "🎪 오프라인 일정 및 지도"])
 
-# 온라인 일정 탭
 with tab1:
     st.subheader("💻 온라인 스케줄 목록")
-    online_df = df[df['구분'] == '온라인'].sort_values(by='날짜').reset_index(drop=True)
+    # ... (내용 동일) ...
+    online_df = df[df['구분'] == '온라인'].sort_values(by='날짜', ascending=False).reset_index(drop=True)
 
     if not online_df.empty:
         for index, row in online_df.iterrows():
@@ -136,17 +136,15 @@ with tab1:
     else:
         st.info("현재 예정된 온라인 스케줄이 없습니다.")
 
-# 오프라인 일정 탭
+
 with tab2:
     st.subheader("🎪 오프라인 스케줄 목록 및 지도")
-    offline_df = df[df['구분'] == '오프라인'].sort_values(by='날짜').reset_index(drop=True)
+    # ... (내용 동일, 지도 부분만 수정) ...
+    offline_df = df[df['구분'] == '오프라인'].sort_values(by='날짜', ascending=False).reset_index(drop=True)
 
     if not offline_df.empty:
-        # Geocoding (주소 -> 위도/경도 변환)
-        # 캐싱을 사용하여 반복적인 API 호출 방지
         @st.cache_data
         def geocode_address(address):
-            """주소를 위도, 경도로 변환합니다."""
             geolocator = Nominatim(user_agent="bol4-schedule-app-csv")
             try:
                 location = geolocator.geocode(address)
@@ -156,39 +154,30 @@ with tab2:
                 return None, None
             return None, None
         
-        # 지도 생성 (대한민국 중심)
         m = folium.Map(location=[36.5, 127.5], zoom_start=7)
 
-        # 오프라인 일정 목록 표시 및 지도에 핀 추가
         for index, row in offline_df.iterrows():
-            address = row['도로명주소']
-            lat, lon = geocode_address(address)
-
-            # 상세 정보 카드
             with st.container(border=True):
                  st.markdown(f"**{row['날짜'].strftime('%Y-%m-%d')} | {row['내용']}**")
                  st.markdown(f"- **장소:** {row['위치']} ({row['도로명주소']})")
                  st.markdown(f"- **시간:** {row['시간'] if pd.notna(row['시간']) else '미정'}")
             
-            # 지도에 마커 추가
+            address = row['도로명주소']
+            lat, lon = geocode_address(address)
             if lat and lon:
-                popup_html = f"""
-                <b>{row['내용']}</b><br>
-                <b>장소:</b> {row['위치']}<br>
-                <b>일시:</b> {row['날짜']} {row['시간']}
-                """
+                popup_html = f"<b>{row['내용']}</b><br><b>장소:</b> {row['위치']}"
                 folium.Marker(
                     [lat, lon],
                     popup=folium.Popup(popup_html, max_width=300),
                     tooltip=row['내용']
                 ).add_to(m)
             else:
-                 st.warning(f"'{address}' 주소의 좌표를 찾을 수 없어 지도에 표시할 수 없습니다.")
-            st.write("") # 간격 추가
+                 st.warning(f"'{address}' 주소의 좌표를 찾을 수 없어 지도에 표시할 수 없습니다.", icon="📍")
+            st.write("") 
 
-        # Folium 지도 렌더링
         st.subheader("📍 스케줄 지도")
-        st_folium(m, width=725, height=500)
+        # 모바일 최적화를 위해 use_container_width=True 사용
+        st_folium(m, use_container_width=True, height=500)
 
     else:
         st.info("현재 예정된 오프라인 스케줄이 없습니다.")
