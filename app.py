@@ -81,7 +81,7 @@ for index, row in df.iterrows():
 
 # 캘린더 옵션: 높이 자동 조절, 툴바 단순화
 calendar_options = {
-    "height": "auto",  # <-- 스크롤바 대신 전체 높이가 보이도록 설정
+    "height": "auto",
     "headerToolbar": {
         "left": "prev,next",
         "center": "title",
@@ -147,7 +147,15 @@ with tab1:
             style_tag = "style='color:grey;'" if is_past else ""
             
             with st.expander(f"**{row['날짜'].strftime('%Y-%m-%d')}** | {row['내용']}"):
-                st.markdown(f"<div {style_tag}>...</div>", unsafe_allow_html=True)
+                # 수정된 부분: 상세 정보가 올바르게 표시되도록 복원
+                st.markdown(
+                    f"<div {style_tag}>"
+                    f"<b>- 방송/플랫폼:</b> {row['위치']}<br>"
+                    f"<b>- 시간:</b> {row['시간'] if pd.notna(row['시간']) else '미정'}<br>"
+                    f"<b>- 메모:</b> {row['메모'] if pd.notna(row['메모']) else '없음'}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
     else:
         st.info("현재 예정된 온라인 스케줄이 없습니다.")
 
@@ -169,20 +177,28 @@ with tab2:
             style_tag = "style='color:grey;'" if is_past else ""
 
             with st.container(border=True):
-                st.markdown(f"<div {style_tag}>...</div>", unsafe_allow_html=True)
+                 # 수정된 부분: 상세 정보가 올바르게 표시되도록 복원
+                st.markdown(
+                    f"<div {style_tag}>"
+                    f"<b>{row['날짜'].strftime('%Y-%m-%d')} | {row['내용']}</b><br>"
+                    f"- <b>장소:</b> {row['위치']} ({row['도로명주소']})<br>"
+                    f"- <b>시간:</b> {row['시간'] if pd.notna(row['시간']) else '미정'}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
 
-            # KeyError가 발생했던 부분: 'доро명주소' -> '도로명주소'로 수정
-            location = geocode_address(row['도로명주소'])
-            if location:
-                popup_html = f"<b>{row['내용']}</b><br><b>장소:</b> {row['위치']}"
-                marker_icon = 'ok-sign' if not is_past else 'time'
-                marker_color = ('red' if not is_past else 'gray')
-                folium.Marker(
-                    [location.latitude, location.longitude],
-                    popup=folium.Popup(popup_html, max_width=300),
-                    tooltip=row['내용'],
-                    icon=folium.Icon(color=marker_color, icon=marker_icon, prefix='glyphicon')
-                ).add_to(m)
+            if pd.notna(row['도로명주소']):
+                location = geocode_address(row['도로명주소'])
+                if location:
+                    popup_html = f"<b>{row['내용']}</b><br><b>장소:</b> {row['위치']}"
+                    marker_icon = 'ok-sign' if not is_past else 'time'
+                    marker_color = 'red' if not is_past else 'gray'
+                    folium.Marker(
+                        [location.latitude, location.longitude],
+                        popup=folium.Popup(popup_html, max_width=300),
+                        tooltip=row['내용'],
+                        icon=folium.Icon(color=marker_color, icon=marker_icon, prefix='glyphicon')
+                    ).add_to(m)
 
         st.subheader("📍 스케줄 지도")
         st_folium(m, use_container_width=True, height=500)
