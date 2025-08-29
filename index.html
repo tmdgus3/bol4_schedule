@@ -2,13 +2,14 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>볼빨간사춘기 스케줄</title>
     <link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
     <style>
         /* 기본 스타일 초기화 */
         body {
             margin: 0;
-            padding: 10px; /* 약간의 여백 추가 */
+            padding: 10px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
         /* 컨트롤 버튼과 년/월 표시 영역 스타일 */
@@ -25,6 +26,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 0 5px;
+            font-size: 16px; /* 기본 버튼 글자 크기 */
         }
         #calendar-controls button:hover {
             background-color: #f5f5f5;
@@ -33,10 +35,36 @@
             font-size: 24px;
             font-weight: bold;
             margin: 0 20px;
+            white-space: nowrap; /* 년/월이 줄바꿈되지 않도록 */
         }
         /* 캘린더 높이 조절 */
         #calendar {
-            height: 85vh; /* 화면 높이의 85%를 차지하도록 설정 */
+            height: 85vh;
+        }
+
+        /* --- 모바일 반응형 코드 추가 --- */
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 5px; /* 모바일에서는 여백 줄이기 */
+            }
+            #calendar-controls {
+                margin-bottom: 8px;
+            }
+            #calendar-controls button {
+                padding: 6px 8px;
+                font-size: 12px; /* 모바일에서 버튼 글자 작게 */
+            }
+            #month-year {
+                font-size: 18px; /* 모바일에서 년/월 글자 작게 */
+                margin: 0 10px;
+            }
+            /* 캘린더 내부 글자 크기 조절 */
+            .toastui-calendar-day-name, .toastui-calendar-day-grid-cell-number {
+                font-size: 12px;
+            }
+            .toastui-calendar-grid-cell-event {
+                font-size: 11px;
+            }
         }
     </style>
 </head>
@@ -45,9 +73,8 @@
         <button id="prev-btn">이전달</button>
         <h1 id="month-year"></h1>
         <button id="next-btn">다음달</button>
-        <button id="today-btn" style="margin-left: 20px;">오늘</button>
+        <button id="today-btn" style="margin-left: 10px;">오늘</button>
     </div>
-
     <div id="calendar"></div>
 
     <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
@@ -59,7 +86,7 @@
             const options = {
                 defaultView: 'month',
                 isReadOnly: true,
-                useDetailPopup: true, // <-- 이 옵션이 팝업을 띄우는 역할입니다.
+                useDetailPopup: true,
                 timezone: { zones: [{ timezoneName: 'Asia/Seoul' }] },
                 calendars: [
                     { id: '공연', name: '공연', color: '#ffffff', bgColor: '#00a9ff', borderColor: '#00a9ff' },
