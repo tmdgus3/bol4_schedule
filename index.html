@@ -76,12 +76,18 @@
                     { id: '이벤트', name: '이벤트', color: '#ffffff', bgColor: '#E47B36', borderColor: '#E47B36' },
                     { id: '기타', name: '기타', color: '#000000', bgColor: '#999999', borderColor: '#999999' }
                 ],
-                // --- 시간 대신 이름만 표시하기 위한 템플릿 추가 ---
                 template: {
                     month: {
                         schedule: function (event) {
                             return `<span style="color: ${event.color};">${event.title}</span>`;
                         }
+                    },
+                    // --- Edit/Delete 버튼 숨기기 위한 템플릿 추가 ---
+                    popupEdit: function() {
+                        return '';
+                    },
+                    popupDelete: function() {
+                        return '';
                     }
                 }
             };
