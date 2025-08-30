@@ -69,7 +69,6 @@
                     visibleEventCount: 2
                 },
                 timezone: { zones: [{ timezoneName: 'Asia/Seoul' }] },
-                // --- 상세 카테고리 및 색상 설정 ---
                 calendars: [
                     { id: '콘서트', name: '콘서트', color: '#ffffff', bgColor: '#00a9ff', borderColor: '#00a9ff' },
                     { id: '페스티벌', name: '페스티벌', color: '#ffffff', bgColor: '#03bd9e', borderColor: '#03bd9e' },
@@ -78,7 +77,6 @@
                     { id: '비공식 일정', name: '비공식 일정', color: '#ffffff', bgColor: '#E47B36', borderColor: '#E47B36' },
                     { id: '기타 행사', name: '기타 행사', color: '#ffffff', bgColor: '#9d9d9d', borderColor: '#9d9d9d' }
                 ],
-                // --- 템플릿 설정 (시간 숨기기, 버튼 숨기기) ---
                 template: {
                     month: {
                         schedule: function (event) {
@@ -91,7 +89,6 @@
             };
             const calendar = new Calendar(container, options);
 
-            // --- 스케줄 데이터 (수정된 카테고리 적용) ---
             const schedules = [
                 { id: '1', calendarId: '온라인 방송', title: '아는 형님', start: '2025-08-02T21:00:00', end: '2025-08-02T22:30:00', body: 'JTBC' },
                 { id: '2', calendarId: '페스티벌', title: '대전 영시축제', start: '2025-08-10T21:30:00', end: '2025-08-10T22:30:00', location: '대전 중앙로역 특설무대' },
@@ -99,7 +96,8 @@
                 { id: '4', calendarId: '기타 행사', title: '삼성 라이온즈 시구', start: '2025-08-14T18:30:00', end: '2025-08-14T19:00:00', location: '대구 삼성 라이온즈 파크' },
                 { id: '5', calendarId: '페스티벌', title: '사운드 플래닛', start: '2025-09-14T19:50:00', end: '2025-09-14T20:50:00', location: '인천 파라다이스 시티' },
                 { id: '6', calendarId: '비공식 일정', title: '생일 카페', start: '2025-09-13', end: '2025-09-14', isAllday: true, location: '홍대 러비니돌 카페' },
-                { id: '7', calendarId: '페스티벌', title: 'MADLY MEDLEY', start: '2025-10-19', end: '2025-10-19', isAllday: true, location: '파라다이스시티' }
+                { id: '7', calendarId: '페스티벌', title: 'MADLY MEDLEY', start: '2025-10-19', end: '2025-10-19', isAllday: true, location: '파라다이스시티' },
+                { id: '8', calendarId: '페스티벌', title: 'EBS 스페이스 공감', start: '2025-08-31T16:00:00', end: '2025-08-31T17:00:00', location: 'EBS 스페이스 공감 (경기 고양시 일산동구 한류월드로 281)' }
             ];
             calendar.createEvents(schedules);
 
