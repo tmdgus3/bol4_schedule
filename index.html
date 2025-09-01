@@ -13,36 +13,32 @@
       -webkit-text-size-adjust: 100%;
     }
     #calendar-controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 8px;
     }
     #calendar-controls button {
-      border: 1px solid #ddd;
-      background-color: #fff;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin: 0 4px;
-      font-size: 14px;
+      border: 1px solid #ddd; background-color: #fff; padding: 6px 10px; border-radius: 4px;
+      cursor: pointer; margin: 0 4px; font-size: 14px;
     }
     #calendar-controls button:hover { background-color: #f5f5f5; }
-    #month-year {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 0 10px;
-      text-align: center;
-      white-space: nowrap;
-    }
+    #month-year { font-size: 18px; font-weight: bold; margin: 0 10px; text-align: center; white-space: nowrap; }
     #calendar { height: 85vh; }
 
-    /* ✅ 월 뷰에서는 ‘시간’ 텍스트 감추고 제목만 보이게 */
+    /* ✅ 월뷰에서 시간 라벨 전부 숨김 (00:00 등) */
+    .toastui-calendar-event-time,
     .toastui-calendar-weekday-event-time,
-    .toastui-calendar-month-week-item-time,
     .toastui-calendar-month-allday-event-time {
       display: none !important;
     }
+
+    /* 팝업은 그대로 보이게 (숨기지 않음) */
+    /* .toastui-calendar-popup-section-item[...] 제거함 */
+    
+    /* 인덱스(범례) */
+    #calendar-index {
+      display: flex; justify-content: center; flex-wrap: wrap; padding: 10px 0; gap: 12px 16px;
+    }
+    .index-item { display: flex; align-items: center; font-size: 13px; }
+    .index-color-chip { width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; }
   </style>
 </head>
 <body>
@@ -55,33 +51,40 @@
 
   <div id="calendar"></div>
 
+  <!-- ✅ 인덱스(범례) 유지 -->
+  <div id="calendar-index">
+    <div class="index-item"><span class="index-color-chip" style="background-color: #E61E2A;"></span>콘서트</div>
+    <div class="index-item"><span class="index-color-chip" style="background-color: #449D44;"></span>페스티벌</div>
+    <div class="index-item"><span class="index-color-chip" style="background-color: #31708F;"></span>대학축제</div>
+    <div class="index-item"><span class="index-color-chip" style="background-color: #F0AD4E;"></span>기타 행사</div>
+    <div class="index-item"><span class="index-color-chip" style="background-color: #00FFFF;"></span>온라인 방송</div>
+    <div class="index-item"><span class="index-color-chip" style="background-color: #FF00FF;"></span>비공식/이벤트</div>
+  </div>
+
   <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const Calendar = tui.Calendar;
       const container = document.getElementById('calendar');
 
-      /* RGBCMY 색상 팔레트 (calendarId → 색상) */
+      /* 카테고리 색상 (인덱스와 동일) */
       const calendarColors = {
-        '콘서트':        { bgColor: '#E61E2A', borderColor: '#E61E2A', color: '#ffffff' }, // Red
-        '페스티벌':      { bgColor: '#449D44', borderColor: '#449D44', color: '#ffffff' }, // Green
-        '대학축제':      { bgColor: '#31708F', borderColor: '#31708F', color: '#ffffff' }, // Blue
-        '기타 행사':     { bgColor: '#F0AD4E', borderColor: '#F0AD4E', color: '#000000' }, // Yellow
-        '온라인 방송':   { bgColor: '#00FFFF', borderColor: '#00FFFF', color: '#000000' }, // Cyan
-        '비공식/이벤트': { bgColor: '#FF00FF', borderColor: '#FF00FF', color: '#ffffff' }  // Magenta
+        '콘서트':        { backgroundColor: '#E61E2A', borderColor: '#E61E2A', color: '#ffffff', bgColor: '#E61E2A' },
+        '페스티벌':      { backgroundColor: '#449D44', borderColor: '#449D44', color: '#ffffff', bgColor: '#449D44' },
+        '대학축제':      { backgroundColor: '#31708F', borderColor: '#31708F', color: '#ffffff', bgColor: '#31708F' },
+        '기타 행사':     { backgroundColor: '#F0AD4E', borderColor: '#F0AD4E', color: '#000000', bgColor: '#F0AD4E' },
+        '온라인 방송':   { backgroundColor: '#00FFFF', borderColor: '#00FFFF', color: '#000000', bgColor: '#00FFFF' },
+        '비공식/이벤트': { backgroundColor: '#FF00FF', borderColor: '#FF00FF', color: '#ffffff', bgColor: '#FF00FF' }
       };
 
-      /* Toast UI 내부 분류용 calendars (범례는 안 쓰지만 매핑 유지) */
       const calendars = Object.keys(calendarColors).map((k) => ({
-        id: k,
-        name: k,
-        ...calendarColors[k]
+        id: k, name: k, ...calendarColors[k]
       }));
 
       const calendar = new Calendar(container, {
         defaultView: 'month',
         isReadOnly: true,
-        useDetailPopup: true,  // 클릭 시 팝업에서 시간/장소/메모 확인
+        useDetailPopup: true,       // 클릭 시 팝업 열림
         month: {
           dayNames: ['일', '월', '화', '수', '목', '금', '토'],
           visibleEventCount: 2
@@ -89,15 +92,12 @@
         timezone: { zones: [{ timezoneName: 'Asia/Seoul' }] },
         calendars,
         template: {
-          /* ✅ 월 뷰: 제목만 렌더링 */
+          /* ✅ 월뷰: 제목만 렌더링 */
           month: {
-            schedule(event) {
-              return `<span>${event.title}</span>`;
-            }
+            schedule(event) { return `<span>${event.title}</span>`; }
           },
           /* 하루종일도 제목만 */
           allday(event) { return `<span>${event.title}</span>`; }
-          /* 팝업 템플릿은 기본값 사용 (시간/장소/본문 표시) */
         }
       });
 
@@ -115,10 +115,10 @@
         { id: '7',  calendarId: '페스티벌',    title: 'MADLY MEDLEY',    start: '2025-10-19', end: '2025-10-19', isAllday: true, location: '파라다이스시티' }
       ];
 
-      /* ✅ calendarId 기반 색상을 자동 주입해서 연두색(기본색) 방지 */
+      /* ✅ 색상 강제 주입(기본 연두색 대신 카테고리 색 적용) */
       const schedules = rawSchedules.map(ev => ({
         ...ev,
-        ...calendarColors[ev.calendarId]
+        ...calendarColors[ev.calendarId]  // backgroundColor/borderColor/color/bgColor 주입
       }));
       calendar.createEvents(schedules);
 
