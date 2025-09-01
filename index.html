@@ -43,22 +43,21 @@
         .toastui-calendar-popup-section-item[style*="display: flex;"] {
             display: none !important;
         }
-        /* --- 인덱스(범례) 스타일 수정 --- */
         #calendar-index {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
             padding: 10px 0;
-            gap: 12px 16px; /* 위아래, 좌우 간격 조정 */
+            gap: 12px 16px;
         }
         .index-item {
             display: flex;
             align-items: center;
-            font-size: 13px; /* 글자 크기 키움 */
+            font-size: 13px;
         }
         .index-color-chip {
-            width: 14px;  /* 색상 칩 크기 키움 */
-            height: 14px; /* 색상 칩 크기 키움 */
+            width: 14px;
+            height: 14px;
             border-radius: 4px;
             margin-right: 6px;
         }
@@ -74,24 +73,12 @@
     <div id="calendar"></div>
 
     <div id="calendar-index">
-        <div class="index-item">
-            <span class="index-color-chip" style="background-color: #ff5583;"></span> 콘서트
-        </div>
-        <div class="index-item">
-            <span class="index-color-chip" style="background-color: #03bd9e;"></span> 페스티벌
-        </div>
-        <div class="index-item">
-            <span class="index-color-chip" style="background-color: #00a9ff;"></span> 대학축제
-        </div>
-        <div class="index-item">
-            <span class="index-color-chip" style="background-color: #9d9d9d;"></span> 온라인 방송
-        </div>
-        <div class="index-item">
-            <span class="index-color-chip" style="background-color: #E47B36;"></span> 비공식/이벤트
-        </div>
-        <div class="index-item">
-            <span class="index-color-chip" style="background-color: #744700;"></span> 기타 행사
-        </div>
+        <div class="index-item"><span class="index-color-chip" style="background-color: #E61E2A;"></span>콘서트</div>
+        <div class="index-item"><span class="index-color-chip" style="background-color: #449D44;"></span>페스티벌</div>
+        <div class="index-item"><span class="index-color-chip" style="background-color: #31708F;"></span>대학축제</div>
+        <div class="index-item"><span class="index-color-chip" style="background-color: #F0AD4E;"></span>기타 행사</div>
+        <div class="index-item"><span class="index-color-chip" style="background-color: #00FFFF;"></span>온라인 방송</div>
+        <div class="index-item"><span class="index-color-chip" style="background-color: #FF00FF;"></span>비공식/이벤트</div>
     </div>
 
     <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
@@ -109,20 +96,26 @@
                     visibleEventCount: 2
                 },
                 timezone: { zones: [{ timezoneName: 'Asia/Seoul' }] },
-                // --- 카테고리 및 색상 재설정 ---
+                // --- RGBCMY 색상 팔레트 적용 ---
                 calendars: [
-                    { id: '콘서트', name: '콘서트', color: '#ffffff', bgColor: '#ff5583', borderColor: '#ff5583' },
-                    { id: '페스티벌', name: '페스티벌', color: '#ffffff', bgColor: '#03bd9e', borderColor: '#03bd9e' },
-                    { id: '대학축제', name: '대학축제', color: '#ffffff', bgColor: '#00a9ff', borderColor: '#00a9ff' },
-                    { id: '온라인 방송', name: '온라인 방송', color: '#ffffff', bgColor: '#9d9d9d', borderColor: '#9d9d9d' },
-                    { id: '비공식/이벤트', name: '비공식/이벤트', color: '#ffffff', bgColor: '#E47B36', borderColor: '#E47B36' },
-                    { id: '기타 행사', name: '기타 행사', color: '#ffffff', bgColor: '#744700', borderColor: '#744700' } // 고동색
+                    { id: '콘서트', name: '콘서트', color: '#ffffff', bgColor: '#E61E2A', borderColor: '#E61E2A' }, // Red
+                    { id: '페스티벌', name: '페스티벌', color: '#ffffff', bgColor: '#449D44', borderColor: '#449D44' }, // Green
+                    { id: '대학축제', name: '대학축제', color: '#ffffff', bgColor: '#31708F', borderColor: '#31708F' }, // Blue
+                    { id: '기타 행사', name: '기타 행사', color: '#000000', bgColor: '#F0AD4E', borderColor: '#F0AD4E' }, // Yellow
+                    { id: '온라인 방송', name: '온라인 방송', color: '#000000', bgColor: '#00FFFF', borderColor: '#00FFFF' }, // Cyan
+                    { id: '비공식/이벤트', name: '비공식/이벤트', color: '#ffffff', bgColor: '#FF00FF', borderColor: '#FF00FF' }  // Magenta
                 ],
+                // --- 템플릿 설정 (시간 숨기기 최종 수정) ---
                 template: {
+                    // 시간 있는 일정의 시간 숨기기
                     month: {
                         schedule: function (event) {
-                            return `<span style="color: ${event.color};">${event.title}</span>`;
+                            return `<span>${event.title}</span>`;
                         }
+                    },
+                    // '하루 종일' 일정의 '00:00' 시간 숨기기
+                    allday: function(event) {
+                        return `<span>${event.title}</span>`;
                     },
                     popupEdit: function() { return ''; },
                     popupDelete: function() { return ''; }
@@ -130,6 +123,7 @@
             };
             const calendar = new Calendar(container, options);
 
+            // 스케줄 데이터
             const schedules = [
                 { id: '1', calendarId: '온라인 방송', title: '아는 형님', start: '2025-08-02T21:00:00', end: '2025-08-02T22:30:00', body: 'JTBC' },
                 { id: '2', calendarId: '페스티벌', title: '대전 영시축제', start: '2025-08-10T21:30:00', end: '2025-08-10T22:30:00', location: '대전 중앙로역 특설무대' },
@@ -144,6 +138,7 @@
             ];
             calendar.createEvents(schedules);
 
+            // --- 이하 코드는 이전과 동일 ---
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
             const todayBtn = document.getElementById('today-btn');
