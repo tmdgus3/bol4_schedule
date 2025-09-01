@@ -58,7 +58,7 @@
     <div class="index-item"><span class="index-color-chip" style="background-color: #31708F;"></span>대학축제</div>
     <div class="index-item"><span class="index-color-chip" style="background-color: #F0AD4E;"></span>기타 행사</div>
     <div class="index-item"><span class="index-color-chip" style="background-color: #00FFFF;"></span>온라인 방송</div>
-    <div class="index-item"><span class="index-color-chip" style="background-color: #FF00FF;"></span>비공식/이벤트</div>
+    <div class="index-item"><span class="index-color-chip" style="background-color: #FF00FF;"></span>비공식 이벤트</div>
   </div>
 
   <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
@@ -74,7 +74,7 @@
         '대학축제':      { backgroundColor: '#31708F', borderColor: '#31708F', color: '#ffffff', bgColor: '#31708F' },
         '기타 행사':     { backgroundColor: '#F0AD4E', borderColor: '#F0AD4E', color: '#000000', bgColor: '#F0AD4E' },
         '온라인 방송':   { backgroundColor: '#00FFFF', borderColor: '#00FFFF', color: '#000000', bgColor: '#00FFFF' },
-        '비공식/이벤트': { backgroundColor: '#FF00FF', borderColor: '#FF00FF', color: '#ffffff', bgColor: '#FF00FF' }
+        '비공식 이벤트': { backgroundColor: '#FF00FF', borderColor: '#FF00FF', color: '#ffffff', bgColor: '#FF00FF' }
       };
 
       const calendars = Object.keys(calendarColors).map((k) => ({
@@ -105,9 +105,9 @@
       const rawSchedules = [
         { id: '1',  calendarId: '온라인 방송',  title: '아는 형님',        start: '2025-08-02T21:00:00', end: '2025-08-02T22:30:00', body: 'JTBC' },
         { id: '2',  calendarId: '페스티벌',    title: '대전 영시축제',    start: '2025-08-10T21:30:00', end: '2025-08-10T22:30:00', location: '대전 중앙로역 특설무대' },
-        { id: '3',  calendarId: '콘서트',      title: '청소년 콘캉스',    start: '2025-08-12T17:30:00', end: '2025-08-12T18:30:00', location: '문경문화예술회관' },
+        { id: '3',  calendarId: '기타 행사',      title: '청소년 콘캉스',    start: '2025-08-12T17:30:00', end: '2025-08-12T18:30:00', location: '문경문화예술회관' },
         { id: '4',  calendarId: '기타 행사',   title: '삼성 라이온즈 시구', start: '2025-08-14T18:30:00', end: '2025-08-14T19:00:00', location: '대구 삼성 라이온즈 파크' },
-        { id: '8',  calendarId: '페스티벌',    title: 'EBS 스페이스 공감', start: '2025-08-31T16:00:00', end: '2025-08-31T17:00:00', location: '노들갤러리 2관 (서울 용산구 양녕로 445)' },
+        { id: '8',  calendarId: '기타 행사',    title: 'EBS 스페이스 공감', start: '2025-08-31T16:00:00', end: '2025-08-31T17:00:00', location: '노들갤러리 2관 (서울 용산구 양녕로 445)' },
         { id: '6',  calendarId: '비공식/이벤트', title: '생일 카페',       start: '2025-09-13', end: '2025-09-14', isAllday: true, location: '홍대 러비니돌 카페' },
         { id: '5',  calendarId: '페스티벌',    title: '사운드 플래닛',    start: '2025-09-14T19:50:00', end: '2025-09-14T20:50:00', location: '인천 파라다이스 시티' },
         { id: '9',  calendarId: '대학축제',    title: '성신여대 축제',    start: '2025-09-18', end: '2025-09-19', isAllday: true, body: '9월 18일 또는 19일 출연 예정', location: '성신여자대학교 돈암수정캠퍼스' },
