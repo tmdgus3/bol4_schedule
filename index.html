@@ -38,29 +38,29 @@
             white-space: nowrap;
         }
         #calendar {
-            height: 85vh; /* 인덱스 공간 확보를 위해 높이 약간 줄임 */
+            height: 85vh;
         }
         .toastui-calendar-popup-section-item[style*="display: flex;"] {
             display: none !important;
         }
-        /* --- 색상 인덱스(범례) 스타일 --- */
+        /* --- 인덱스(범례) 스타일 수정 --- */
         #calendar-index {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
             padding: 10px 0;
-            gap: 15px;
+            gap: 12px 16px; /* 위아래, 좌우 간격 조정 */
         }
         .index-item {
             display: flex;
             align-items: center;
-            font-size: 12px;
+            font-size: 13px; /* 글자 크기 키움 */
         }
         .index-color-chip {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-            margin-right: 5px;
+            width: 14px;  /* 색상 칩 크기 키움 */
+            height: 14px; /* 색상 칩 크기 키움 */
+            border-radius: 4px;
+            margin-right: 6px;
         }
     </style>
 </head>
@@ -89,6 +89,9 @@
         <div class="index-item">
             <span class="index-color-chip" style="background-color: #E47B36;"></span> 비공식/이벤트
         </div>
+        <div class="index-item">
+            <span class="index-color-chip" style="background-color: #744700;"></span> 기타 행사
+        </div>
     </div>
 
     <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
@@ -106,14 +109,14 @@
                     visibleEventCount: 2
                 },
                 timezone: { zones: [{ timezoneName: 'Asia/Seoul' }] },
-                // --- 새로운 카테고리 및 색상 설정 ---
+                // --- 카테고리 및 색상 재설정 ---
                 calendars: [
-                    { id: '콘서트', name: '콘서트', color: '#ffffff', bgColor: '#ff5583', borderColor: '#ff5583' }, // 빨간색 계열
-                    { id: '페스티벌', name: '페스티벌', color: '#ffffff', bgColor: '#03bd9e', borderColor: '#03bd9e' }, // 초록색 계열
-                    { id: '대학축제', name: '대학축제', color: '#ffffff', bgColor: '#00a9ff', borderColor: '#00a9ff' }, // 파란색 계열
-                    { id: '온라인 방송', name: '온라인 방송', color: '#ffffff', bgColor: '#9d9d9d', borderColor: '#9d9d9d' }, // 회색
-                    { id: '비공식/이벤트', name: '비공식/이벤트', color: '#ffffff', bgColor: '#E47B36', borderColor: '#E47B36' }, // 주황색
-                    { id: '기타 행사', name: '기타 행사', color: '#ffffff', bgColor: '#9d9d9d', borderColor: '#9d9d9d' }
+                    { id: '콘서트', name: '콘서트', color: '#ffffff', bgColor: '#ff5583', borderColor: '#ff5583' },
+                    { id: '페스티벌', name: '페스티벌', color: '#ffffff', bgColor: '#03bd9e', borderColor: '#03bd9e' },
+                    { id: '대학축제', name: '대학축제', color: '#ffffff', bgColor: '#00a9ff', borderColor: '#00a9ff' },
+                    { id: '온라인 방송', name: '온라인 방송', color: '#ffffff', bgColor: '#9d9d9d', borderColor: '#9d9d9d' },
+                    { id: '비공식/이벤트', name: '비공식/이벤트', color: '#ffffff', bgColor: '#E47B36', borderColor: '#E47B36' },
+                    { id: '기타 행사', name: '기타 행사', color: '#ffffff', bgColor: '#744700', borderColor: '#744700' } // 고동색
                 ],
                 template: {
                     month: {
