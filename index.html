@@ -61,7 +61,6 @@
             border-radius: 4px;
             margin-right: 6px;
         }
-        /* --- 모바일 팝업 오류 수정을 위한 최종 코드 --- */
         .toastui-calendar-popup-container, .toastui-calendar-month-more-popup {
             z-index: 9999 !important;
         }
@@ -97,7 +96,11 @@
                 useDetailPopup: true,
                 month: {
                     dayNames: ['일', '월', '화', '수', '목', '금', '토'],
-                    visibleEventCount: 2
+                    visibleEventCount: 2,
+                    // --- '더보기' 팝업창 크기 조절 ---
+                    moreLayerSize: {
+                        height: 'auto' // 높이를 내용물에 맞게 자동으로 조절
+                    }
                 },
                 timezone: { zones: [{ timezoneName: 'Asia/Seoul' }] },
                 calendars: [
@@ -120,37 +123,4 @@
             const schedules = [
                 { id: '1', calendarId: '온라인 방송', title: '아는 형님', start: '2025-08-02T21:00:00', end: '2025-08-02T22:30:00', body: 'JTBC' },
                 { id: '2', calendarId: '페스티벌', title: '대전 영시축제', start: '2025-08-10T21:30:00', end: '2025-08-10T22:30:00', location: '대전 중앙로역 특설무대' },
-                { id: '3', calendarId: '콘서트', title: '청소년 콘캉스', start: '2025-08-12T17:30:00', end: '2025-08-12T18:30:00', location: '문경문화예술회관' },
-                { id: '4', calendarId: '기타 행사', title: '삼성 라이온즈 시구', start: '2025-08-14T18:30:00', end: '2025-08-14T19:00:00', location: '대구 삼성 라이온즈 파크' },
-                { id: '8', calendarId: '페스티벌', title: 'EBS 스페이스 공감', start: '2025-08-31T16:00:00', end: '2025-08-31T17:00:00', location: '노들갤러리 2관 (서울 용산구 양녕로 445)' },
-                { id: '6', calendarId: '비공식/이벤트', title: '생일 카페', start: '2025-09-13T11:00:00', end: '2025-09-14T19:00:00', location: '홍대 러비니돌 카페' },
-                { id: '5', calendarId: '페스티벌', title: '사운드 플래닛', start: '2025-09-14T19:50:00', end: '2025-09-14T20:50:00', location: '인천 파라다이스 시티' },
-                { id: '11', calendarId: '대학축제', title: '부산대 축제', start: '2025-09-17T19:20:00', end: '2025-09-17T20:00:00', location: '부산대학교' },
-                { id: '9', calendarId: '대학축제', title: '성신여대 축제', start: '2025-09-18', end: '2025-09-18', isAllday: true, body: '출연 시간 미정', location: '성신여자대학교 돈암수정캠퍼스' },
-                { id: '12', calendarId: '대학축제', title: '강남대 축제', start: '2025-09-24', end: '2025-09-24', isAllday: true, body: '출연 시간 미정', location: '강남대학교' },
-                { id: '10', calendarId: '대학축제', title: '가톨릭상지대 축제', start: '2025-09-25', end: '2025-09-25', isAllday: true, location: '가톨릭상지대학교 운동장 야외 특설무대' },
-                { id: '7', calendarId: '페스티벌', title: 'MADLY MEDLEY', start: '2025-10-19', end: '2025-10-19', isAllday: true, location: '파라다이스시티' }
-            ];
-            calendar.createEvents(schedules);
-
-            const prevBtn = document.getElementById('prev-btn');
-            const nextBtn = document.getElementById('next-btn');
-            const todayBtn = document.getElementById('today-btn');
-            const monthYearEl = document.getElementById('month-year');
-
-            function updateMonthYear() {
-                const currentDate = calendar.getDate();
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth() + 1;
-                monthYearEl.textContent = `${year}년 ${month}월`;
-            }
-
-            prevBtn.addEventListener('click', function() { calendar.prev(); updateMonthYear(); });
-            nextBtn.addEventListener('click', function() { calendar.next(); updateMonthYear(); });
-            todayBtn.addEventListener('click', function() { calendar.today(); updateMonthYear(); });
-
-            updateMonthYear();
-        });
-    </script>
-</body>
-</html>
+                { id: '3', calendarId: '콘서트', title: '청소년 콘캉스', start: '
